@@ -117,12 +117,12 @@ st.sidebar.markdown("<small style='color:#6b6b8a'>AI Document Extractor · v1.0<
 # ── Build Redaction Rules ─────────────────────────────────────────────
 def build_redaction_prompt():
     rules = []
-    if redact_ids:       rules.append("Aadhaar numbers, SSN, PAN, passport numbers, national ID numbers, driving license numbers")
-    if redact_phones:    rules.append("phone numbers, mobile numbers, email addresses")
-    if redact_banking:   rules.append("bank account numbers, IFSC codes, credit card numbers, debit card numbers, CVV, UPI IDs")
-    if redact_passwords: rules.append("passwords, API keys, secret keys, tokens, OTPs")
-    if redact_names:     rules.append("full names of individuals")
-    if redact_dates:     rules.append("dates of birth")
+    if redact_ids:       rules.append("Aadhaar numbers (12-digit, may be spaced as XXXX XXXX XXXX), SSN, PAN card numbers (format: ABCDE1234F), passport numbers, driving license numbers, voter ID, any government ID number")
+    if redact_phones:    rules.append("phone numbers, mobile numbers (+91 or 10-digit), email addresses, contact numbers")
+    if redact_banking:   rules.append("bank account numbers, IFSC codes, credit card numbers, debit card numbers, CVV, UPI IDs, MICR codes")
+    if redact_passwords: rules.append("passwords, API keys, secret keys, tokens, OTPs, PINs")
+    if redact_names:     rules.append("full names of any person — INCLUDING names on Aadhaar cards, identity documents, official documents. Names usually appear after labels like 'Name:', 'नाम:', or at the top of the document")
+    if redact_dates:     rules.append("dates of birth in ANY format (DD/MM/YYYY, YYYY-MM-DD, written like '15 August 1990'), DOB, Year of Birth, जन्म तिथि")
     return rules
 
 # ── Extract text from PDF ─────────────────────────────────────────────
@@ -207,28 +207,41 @@ def redact_sensitive(text, rules):
 
     placeholder = "[REDACTED]" if show_redacted else "████"
 
-    prompt = f"""You are a data privacy engine. Given the text below, identify and replace ALL occurrences of sensitive information with "{placeholder}".
+    prompt = f"""You are a strict data privacy and redaction engine. Redact ALL sensitive data from the text below.
 
-Sensitive categories to redact:
+SENSITIVE CATEGORIES (be extremely thorough — missing even one is a privacy violation):
 {chr(10).join(f'- {r}' for r in rules)}
 
-Rules:
-- Replace ONLY the sensitive values, keep all surrounding normal text intact
-- Do NOT remove sentences, just replace the sensitive parts
-- Return a JSON object with exactly these fields:
-  - "clean_text": the full text with sensitive parts replaced
-  - "redacted_items": list of strings describing what was redacted (e.g. ["phone number", "email"])
+CRITICAL RULES:
+- This text may come from an Aadhaar card, passport, or government ID document
+- You MUST find and replace EVERY single instance without exception
+- Replace ONLY the sensitive value itself with "{placeholder}", keep all surrounding text
+- Names on Aadhaar appear after "Name:", "नाम:" or at the very top — REDACT them
+- DOB appears after "DOB:", "Date of Birth:", "जन्म तिथि:" — REDACT the date value
+- Aadhaar numbers are 12 digits (may be spaced: XXXX XXXX XXXX) — REDACT them
+- When in doubt about whether something is sensitive — REDACT it
+- Do NOT keep any sensitive data visible under any circumstance
+
+Return a JSON object with:
+  - "clean_text": the full text with ALL sensitive parts replaced with "{placeholder}"
+  - "redacted_items": list of strings describing each redacted item (e.g. ["name: John Doe", "DOB: 01/01/1990"])
   - "redaction_count": total number of replacements made
 
-Return ONLY valid JSON. No markdown, no explanation.
+Return ONLY valid JSON. No markdown fences, no explanation.
 
-TEXT:
+TEXT TO REDACT:
 {text[:6000]}"""
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a strict data privacy engine. You must redact ALL sensitive information without exception. Never leave any sensitive data visible. Always return only valid JSON with no extra text."
+            },
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.0,
         max_tokens=4000
     )
     raw     = response.choices[0].message.content.strip()
@@ -236,13 +249,17 @@ TEXT:
 
     try:
         result = json.loads(cleaned)
-        return (
-            result.get("clean_text", text),
-            result.get("redacted_items", []),
-            result.get("redaction_count", 0)
-        )
+        clean  = result.get("clean_text", text)
+        items  = result.get("redacted_items", [])
+        count  = result.get("redaction_count", 0)
+
+        # Double-check with regex as safety net
+        clean, extra_items, extra_count = regex_redact(clean, placeholder)
+        items  = items + extra_items
+        count  = count + extra_count
+
+        return clean, items, count
     except:
-        # Fallback: regex-based redaction
         return regex_redact(text, placeholder)
 
 # ── Regex fallback redaction ──────────────────────────────────────────
@@ -250,23 +267,38 @@ def regex_redact(text, placeholder="[REDACTED]"):
     count   = 0
     removed = []
 
+    if redact_ids:
+        # Aadhaar: 12 digits optionally spaced
+        new = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b', placeholder, text)
+        if new != text: count += 1; removed.append("Aadhaar number"); text = new
+        # PAN
+        new = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', placeholder, text)
+        if new != text: count += 1; removed.append("PAN number"); text = new
+
     if redact_phones:
-        new = re.sub(r'\b[\+]?[0-9]{10,13}\b', placeholder, text)
-        if new != text: count += text.count(re.findall(r'\b[\+]?[0-9]{10,13}\b', text)[0]) if re.findall(r'\b[\+]?[0-9]{10,13}\b', text) else 0; removed.append("phone numbers")
-        text = new
-        new  = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', placeholder, text)
-        if new != text: count += 1; removed.append("email addresses")
-        text = new
+        new = re.sub(r'\b(\+91[\s-]?)?[6-9]\d{9}\b', placeholder, text)
+        if new != text: count += 1; removed.append("phone number"); text = new
+        new = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', placeholder, text)
+        if new != text: count += 1; removed.append("email address"); text = new
 
     if redact_banking:
         new = re.sub(r'\b(?:\d[ -]*?){13,16}\b', placeholder, text)
-        if new != text: count += 1; removed.append("card numbers")
-        text = new
+        if new != text: count += 1; removed.append("card number"); text = new
+        new = re.sub(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', placeholder, text)
+        if new != text: count += 1; removed.append("IFSC code"); text = new
 
-    if redact_ids:
-        new = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b', placeholder, text)
-        if new != text: count += 1; removed.append("ID numbers")
-        text = new
+    if redact_dates:
+        # DD/MM/YYYY or DD-MM-YYYY
+        new = re.sub(r'\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b', placeholder, text)
+        if new != text: count += 1; removed.append("date of birth"); text = new
+        # DOB: label followed by date
+        new = re.sub(r'(DOB|Date of Birth|जन्म तिथि)\s*[:\-]?\s*[\d\/\-\w ]+', lambda m: m.group(0).split(':')[0] + ': ' + placeholder if ':' in m.group(0) else placeholder, text)
+        if new != text: count += 1; removed.append("DOB field"); text = new
+
+    if redact_names:
+        # Name: label followed by value
+        new = re.sub(r'(Name|नाम)\s*[:\-]\s*[A-Za-z\s]{3,40}', lambda m: m.group(0).split(':')[0] + ': ' + placeholder, text)
+        if new != text: count += 1; removed.append("name field"); text = new
 
     return text, removed, count
 
