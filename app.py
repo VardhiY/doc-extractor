@@ -93,19 +93,26 @@ st.markdown('<div class="badge"><span>📄 AI Document Extractor · Smart Redact
 st.markdown('<div class="main-title">AI Document Extractor</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Extract text from any document or image · Sensitive data auto-redacted.</div>', unsafe_allow_html=True)
 
-# ── Settings in main page (always visible) ───────────────────────────
-with st.expander("⚙️ Redaction Settings", expanded=True):
-    st.markdown("**Select what to redact:**")
-    col1, col2 = st.columns(2)
-    with col1:
-        redact_ids       = st.checkbox("🪪 ID / Aadhaar / SSN numbers",  value=True)
-        redact_phones    = st.checkbox("📞 Phone numbers & emails",       value=True)
-        redact_banking   = st.checkbox("💳 Bank / credit card numbers",   value=True)
-        redact_passwords = st.checkbox("🔑 Passwords & secret keys",      value=True)
-    with col2:
-        redact_names     = st.checkbox("👤 Personal names",               value=False)
-        redact_dates     = st.checkbox("📅 Dates of birth",               value=False)
-        show_redacted    = st.checkbox("Show [REDACTED] placeholders",    value=True)
+# ── Force sidebar always open ─────────────────────────────────────────
+st.markdown("""
+<style>
+[data-testid="stSidebar"] { display: block !important; visibility: visible !important; transform: none !important; min-width: 250px !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Sidebar Settings ──────────────────────────────────────────────────
+st.sidebar.markdown("## ⚙️ Settings")
+st.sidebar.markdown("**Redact sensitive data:**")
+redact_ids       = st.sidebar.checkbox("🪪 ID / Aadhaar / SSN numbers",  value=True)
+redact_phones    = st.sidebar.checkbox("📞 Phone numbers & emails",       value=True)
+redact_banking   = st.sidebar.checkbox("💳 Bank / credit card numbers",   value=True)
+redact_passwords = st.sidebar.checkbox("🔑 Passwords & secret keys",      value=True)
+redact_names     = st.sidebar.checkbox("👤 Personal names",                value=False)
+redact_dates     = st.sidebar.checkbox("📅 Dates of birth",                value=False)
+show_redacted    = st.sidebar.checkbox("Show [REDACTED] placeholders",     value=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown("<small style='color:#6b6b8a'>AI Document Extractor · v1.0</small>", unsafe_allow_html=True)
 
 # ── Build Redaction Rules ─────────────────────────────────────────────
 def build_redaction_prompt():
