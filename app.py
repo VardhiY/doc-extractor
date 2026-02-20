@@ -535,18 +535,6 @@ with col1:
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col2:
-    shields = [
-        ("🪪", "Aadhaar · SSN · PAN", redact_ids),
-        ("📞", "Phone & Email",        redact_phones),
-        ("💳", "Bank · Cards · UPI",  redact_banking),
-        ("🔑", "Passwords · Keys",    redact_passwords),
-        ("👤", "Personal Names",       redact_names),
-        ("📅", "Dates of Birth",       redact_dates),
-    ]
-    items_html = "".join(
-        f'<div class="shield-item {"on" if a else ""}"><span class="shield-label">{ic} {lb}</span><div class="shield-toggle {"on" if a else ""}"></div></div>'
-        for ic,lb,a in shields
-    )
     st.markdown(f"""
     <div class="card">
         <div class="card-head">
@@ -554,16 +542,45 @@ with col2:
                 <div class="card-ico ico-white">🛡️</div>
                 <div>
                     <div class="card-title">Privacy Shield</div>
-                    <div class="card-desc">{active} of 6 layers active</div>
+                    <div class="card-desc">Toggle redaction layers</div>
                 </div>
             </div>
             <span class="card-badge {"badge-green" if active>0 else "badge-dim"}">{"ACTIVE" if active>0 else "OFF"}</span>
         </div>
         <div class="card-body">
-            <div class="shield-list">{items_html}</div>
-        </div>
-    </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <style>
+    div[data-testid="stVerticalBlock"] .stCheckbox > label {
+        font-family:'Inter',sans-serif !important;
+        font-size:0.82rem !important; font-weight:500 !important;
+        color:rgba(255,255,255,0.55) !important;
+        background:rgba(255,255,255,0.03);
+        border:1px solid rgba(255,255,255,0.06);
+        border-radius:10px; padding:0.55rem 0.8rem !important;
+        width:100%; display:flex; align-items:center;
+        gap:0.6rem; transition:all 0.2s; margin-bottom:0.4rem;
+    }
+    div[data-testid="stVerticalBlock"] .stCheckbox > label:hover {
+        background:rgba(180,255,50,0.06) !important;
+        border-color:rgba(180,255,50,0.2) !important;
+        color:rgba(255,255,255,0.85) !important;
+    }
+    div[data-testid="stVerticalBlock"] .stCheckbox input:checked + div {
+        background:#b4ff32 !important; border-color:#b4ff32 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    redact_ids       = st.checkbox("🪪  Aadhaar · SSN · PAN · ID",  value=redact_ids,  key="ri2")
+    redact_phones    = st.checkbox("📞  Phone & Email",              value=redact_phones,  key="rp2")
+    redact_banking   = st.checkbox("💳  Bank · Cards · UPI",        value=redact_banking, key="rb2")
+    redact_passwords = st.checkbox("🔑  Passwords · Keys · OTPs",   value=redact_passwords, key="rpw2")
+    redact_names     = st.checkbox("👤  Personal Names",             value=redact_names,   key="rn2")
+    redact_dates     = st.checkbox("📅  Dates of Birth",             value=redact_dates,   key="rd2")
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)  # close main-wrap
 
@@ -617,7 +634,15 @@ def img_text(fb,mime):
         model="meta-llama/llama-4-scout-17b-16e-instruct",
         messages=[{"role":"user","content":[
             {"type":"image_url","image_url":{"url":f"data:{mime};base64,{b64}"}},
-            {"type":"text","text":"Extract ALL text from this image exactly. Return only raw text."}
+            {"type":"text","text":"""Analyze this image carefully and do the following:
+1. Extract ALL visible text exactly as it appears (signs, labels, documents, watermarks, URLs, etc.)
+2. If there is little or no text, describe what you see in the image in detail (people, objects, setting, colors, actions)
+3. Format your response as:
+TEXT FOUND:
+[any text you can read, or 'No readable text found']
+
+IMAGE DESCRIPTION:
+[detailed description of what is in the image]"""}
         ]}],max_tokens=2000)
     return r.choices[0].message.content.strip()
 
