@@ -350,24 +350,46 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-redact_ids       = st.sidebar.checkbox("🪪  Aadhaar · SSN · PAN",      value=True)
-redact_phones    = st.sidebar.checkbox("📞  Phone & Email",             value=True)
-redact_banking   = st.sidebar.checkbox("💳  Bank · Cards · UPI",       value=True)
-redact_passwords = st.sidebar.checkbox("🔑  Passwords · Keys",         value=True)
-redact_names     = st.sidebar.checkbox("👤  Personal Names",            value=True)
-redact_dates     = st.sidebar.checkbox("📅  Dates of Birth",            value=True)
+# Init session state toggles
+if "ri"  not in st.session_state: st.session_state.ri  = True
+if "rp"  not in st.session_state: st.session_state.rp  = True
+if "rb"  not in st.session_state: st.session_state.rb  = True
+if "rpw" not in st.session_state: st.session_state.rpw = True
+if "rn"  not in st.session_state: st.session_state.rn  = True
+if "rd"  not in st.session_state: st.session_state.rd  = True
+
+# Read current values
+redact_ids       = st.session_state.ri
+redact_phones    = st.session_state.rp
+redact_banking   = st.session_state.rb
+redact_passwords = st.session_state.rpw
+redact_names     = st.session_state.rn
+redact_dates     = st.session_state.rd
 
 st.sidebar.markdown("""<div class="sb-section"><div class="sb-section-label">Output</div></div>""", unsafe_allow_html=True)
 show_redacted = st.sidebar.checkbox("Show [REDACTED] tags", value=True)
 
 active = sum([redact_ids,redact_phones,redact_banking,redact_passwords,redact_names,redact_dates])
+
+sb_shields = [
+    ("🪪", "Aadhaar · SSN · PAN", redact_ids),
+    ("📞", "Phone & Email",        redact_phones),
+    ("💳", "Bank · Cards · UPI",  redact_banking),
+    ("🔑", "Passwords · Keys",    redact_passwords),
+    ("👤", "Personal Names",       redact_names),
+    ("📅", "Dates of Birth",       redact_dates),
+]
+shield_rows = "".join(
+    f'<div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">'
+    f'<span style="font-size:0.75rem;color:{"rgba(255,255,255,0.5)" if a else "rgba(255,255,255,0.18)"}">{ic} {lb}</span>'
+    f'<span style="font-size:0.6rem;font-family:Fira Code,monospace;color:{"#b4ff32" if a else "rgba(255,255,255,0.15)"}">{"ON" if a else "OFF"}</span>'
+    f'</div>'
+    for ic,lb,a in sb_shields
+)
 st.sidebar.markdown(f"""
 <div class="sb-section">
-    <div class="sb-section-label">Shield Status</div>
-    <div class="sb-stat-row">
-        <div class="sb-stat"><div class="sb-stat-num">{active}</div><div class="sb-stat-lbl">Active</div></div>
-        <div class="sb-stat"><div class="sb-stat-num">{6-active}</div><div class="sb-stat-lbl">Inactive</div></div>
-    </div>
+    <div class="sb-section-label">Shield Status · {active}/6 Active</div>
+    {shield_rows}
 </div>
 <div class="sb-footer">
     Powered by Groq<br>
@@ -535,6 +557,15 @@ with col1:
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col2:
+    # Read live values from session state
+    redact_ids       = st.session_state.ri
+    redact_phones    = st.session_state.rp
+    redact_banking   = st.session_state.rb
+    redact_passwords = st.session_state.rpw
+    redact_names     = st.session_state.rn
+    redact_dates     = st.session_state.rd
+    active_count     = sum([redact_ids,redact_phones,redact_banking,redact_passwords,redact_names,redact_dates])
+
     st.markdown(f"""
     <div class="card">
         <div class="card-head">
@@ -542,43 +573,60 @@ with col2:
                 <div class="card-ico ico-white">🛡️</div>
                 <div>
                     <div class="card-title">Privacy Shield</div>
-                    <div class="card-desc">Toggle redaction layers</div>
+                    <div class="card-desc">{active_count} of 6 layers active</div>
                 </div>
             </div>
-            <span class="card-badge {"badge-green" if active>0 else "badge-dim"}">{"ACTIVE" if active>0 else "OFF"}</span>
+            <span class="card-badge {"badge-green" if active_count>0 else "badge-dim"}">{"ACTIVE" if active_count>0 else "OFF"}</span>
         </div>
         <div class="card-body">
     """, unsafe_allow_html=True)
 
     st.markdown("""
     <style>
-    div[data-testid="stVerticalBlock"] .stCheckbox > label {
-        font-family:'Inter',sans-serif !important;
-        font-size:0.82rem !important; font-weight:500 !important;
-        color:rgba(255,255,255,0.55) !important;
-        background:rgba(255,255,255,0.03);
-        border:1px solid rgba(255,255,255,0.06);
-        border-radius:10px; padding:0.55rem 0.8rem !important;
-        width:100%; display:flex; align-items:center;
-        gap:0.6rem; transition:all 0.2s; margin-bottom:0.4rem;
-    }
-    div[data-testid="stVerticalBlock"] .stCheckbox > label:hover {
-        background:rgba(180,255,50,0.06) !important;
-        border-color:rgba(180,255,50,0.2) !important;
-        color:rgba(255,255,255,0.85) !important;
-    }
-    div[data-testid="stVerticalBlock"] .stCheckbox input:checked + div {
-        background:#b4ff32 !important; border-color:#b4ff32 !important;
-    }
+    /* Toggle row style */
+    .tog-row { display:flex; align-items:center; justify-content:space-between;
+        background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+        border-radius:10px; padding:0.6rem 0.9rem; margin-bottom:0.5rem; }
+    .tog-row.on { background:rgba(180,255,50,0.06); border-color:rgba(180,255,50,0.18); }
+    .tog-label { font-size:0.8rem; font-weight:500; color:rgba(255,255,255,0.4); }
+    .tog-row.on .tog-label { color:rgba(255,255,255,0.82); }
+    .tog-pill { width:38px; height:20px; border-radius:10px; position:relative;
+        background:rgba(255,255,255,0.08); flex-shrink:0; }
+    .tog-pill.on { background:rgba(180,255,50,0.35); }
+    .tog-pill::after { content:''; position:absolute; top:3px; left:3px;
+        width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.3); transition:all 0.2s; }
+    .tog-pill.on::after { left:21px; background:#b4ff32; box-shadow:0 0 8px rgba(180,255,50,0.7); }
+    /* hide real checkbox but keep it clickable */
+    .tog-wrap { position:relative; margin-bottom:0.5rem; }
+    .tog-wrap .stCheckbox { position:absolute; inset:0; opacity:0; z-index:2; cursor:pointer; }
+    .tog-wrap .stCheckbox > label { width:100%; height:100%; cursor:pointer; }
     </style>
     """, unsafe_allow_html=True)
 
-    redact_ids       = st.checkbox("🪪  Aadhaar · SSN · PAN · ID",  value=redact_ids,  key="ri2")
-    redact_phones    = st.checkbox("📞  Phone & Email",              value=redact_phones,  key="rp2")
-    redact_banking   = st.checkbox("💳  Bank · Cards · UPI",        value=redact_banking, key="rb2")
-    redact_passwords = st.checkbox("🔑  Passwords · Keys · OTPs",   value=redact_passwords, key="rpw2")
-    redact_names     = st.checkbox("👤  Personal Names",             value=redact_names,   key="rn2")
-    redact_dates     = st.checkbox("📅  Dates of Birth",             value=redact_dates,   key="rd2")
+    shields = [
+        ("🪪", "Aadhaar · SSN · PAN", "ri"),
+        ("📞", "Phone & Email",        "rp"),
+        ("💳", "Bank · Cards · UPI",  "rb"),
+        ("🔑", "Passwords · Keys",    "rpw"),
+        ("👤", "Personal Names",       "rn"),
+        ("📅", "Dates of Birth",       "rd"),
+    ]
+
+    for icon, label, key in shields:
+        val = st.session_state[key]
+        on  = "on" if val else ""
+        # Visual toggle row
+        st.markdown(f"""
+        <div class="tog-row {on}">
+            <span class="tog-label">{icon} &nbsp;{label}</span>
+            <div class="tog-pill {on}"></div>
+        </div>
+        """, unsafe_allow_html=True)
+        # Invisible real checkbox on top
+        new_val = st.checkbox(label, value=val, key=f"cb_{key}", label_visibility="collapsed")
+        if new_val != val:
+            st.session_state[key] = new_val
+            st.rerun()
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
