@@ -1,862 +1,436 @@
 import streamlit as st
 from groq import Groq
-import json, re, base64, io, hashlib
+import json, re, base64, io
 
 st.set_page_config(
     page_title="DocVault · AI Extractor",
     page_icon="🔐",
-    layout="centered"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 try:
     API_KEY = st.secrets["GROQ_API_KEY"]
     client  = Groq(api_key=API_KEY)
 except Exception:
-    st.error("⚠️ API key not configured.")
-    st.info("Add to Streamlit Secrets:\n\n`GROQ_API_KEY = \"gsk_your_key_here\"`")
+    st.error("⚠️ API key not configured. Add GROQ_API_KEY to Streamlit Secrets.")
     st.stop()
 
-# ── Custom CSS ────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;}
+html,body,[class*="css"]{font-family:'Outfit',sans-serif!important;-webkit-font-smoothing:antialiased;}
+.stApp{background:#03030a!important;color:#eeeef8!important;
+  background-image:radial-gradient(ellipse 120% 60% at 50% -10%,rgba(120,255,80,.09) 0%,transparent 55%),
+    radial-gradient(ellipse 70% 50% at 10% 90%,rgba(80,120,255,.06) 0%,transparent 50%),
+    radial-gradient(ellipse 50% 40% at 90% 60%,rgba(255,80,180,.04) 0%,transparent 50%);}
+#MainMenu,footer,header,.stDeployButton,[data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stStatusWidget"]{display:none!important;}
+[data-testid="collapsedControl"]{display:flex!important;}
 
-/* ── Reset & Base ── */
-html, body, [class*="css"] {
-    font-family: 'Space Grotesk', sans-serif;
-    -webkit-font-smoothing: antialiased;
-}
+/* KEY CENTRING FIX */
+.block-container{max-width:840px!important;margin-left:auto!important;margin-right:auto!important;padding:1rem 2rem 4rem!important;}
 
-.stApp {
-    background: #050508;
-    color: #f0f0f8;
-    background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(140,255,100,0.07) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(100,200,255,0.05) 0%, transparent 50%);
-}
+[data-testid="stSidebar"]{background:#07070f!important;border-right:1px solid #12122a!important;min-width:260px!important;}
+[data-testid="stSidebar"] *{color:#9090b8!important;font-family:'Outfit',sans-serif!important;}
+[data-testid="stSidebar"] h2,[data-testid="stSidebar"] strong{color:#eeeef8!important;}
+[data-testid="stSidebar"] hr{border-color:#12122a!important;}
+[data-testid="stSidebar"] label{font-size:.85rem!important;}
 
-/* ── Hide clutter ── */
-#MainMenu, footer, header, .stDeployButton,
-[data-testid="stToolbar"], [data-testid="stDecoration"],
-[data-testid="stStatusWidget"] { display:none !important; visibility:hidden !important; }
-[data-testid="stSidebar"] { min-width:270px !important; }
-[data-testid="collapsedControl"] { display:flex !important; visibility:visible !important; }
+.hero{text-align:center;padding:2.5rem 1rem 1.8rem;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:520px;height:220px;
+  background:radial-gradient(ellipse,rgba(138,255,80,.12) 0%,transparent 70%);pointer-events:none;z-index:0;border-radius:50%;}
+.badge{position:relative;z-index:1;display:inline-flex;align-items:center;gap:.5rem;
+  background:linear-gradient(135deg,rgba(138,255,80,.1),rgba(80,200,255,.07));
+  border:1px solid rgba(138,255,80,.22);color:#a8ff60;padding:.35rem 1.1rem;border-radius:999px;
+  font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:1.1rem;}
+.bdot{width:7px;height:7px;background:#a8ff60;border-radius:50%;
+  box-shadow:0 0 10px #a8ff60,0 0 22px rgba(168,255,96,.4);animation:gp 2s ease-in-out infinite;}
+@keyframes gp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.6)}}
+.htitle{position:relative;z-index:1;font-family:'Bebas Neue',sans-serif;
+  font-size:5.8rem;letter-spacing:.06em;line-height:.92;color:#eeeef8;margin-bottom:.7rem;}
+.htitle .g{background:linear-gradient(90deg,#a8ff60 0%,#60ffcc 50%,#60c8ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hsub{position:relative;z-index:1;font-size:.95rem;color:#3a3a68;font-weight:400;max-width:460px;margin:0 auto;line-height:1.6;}
 
-/* ── Sidebar ── */
-section[data-testid="stSidebar"] {
-    background: #0c0c12 !important;
-    border-right: 1px solid #1a1a2e !important;
-}
-section[data-testid="stSidebar"] * { color: #c0c0d8 !important; }
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] strong { color: #f0f0f8 !important; }
-div[data-testid="stSelectbox"] > div {
-    background: #0a0a12 !important;
-    border: 1px solid #1e1e38 !important;
-    border-radius: 10px !important;
-}
+.sec-card{background:linear-gradient(145deg,#090916,#0d0d1e);border:1px solid #16162e;border-radius:24px;
+  padding:1.8rem 2rem;margin:1.5rem 0;position:relative;overflow:hidden;}
+.sec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#a8ff60 40%,#60ffcc 60%,transparent);opacity:.45;}
+.sec-card::after{content:'🛡️';position:absolute;right:1.5rem;bottom:.5rem;font-size:6rem;opacity:.03;pointer-events:none;}
+.shead{font-size:.66rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#a8ff60;margin-bottom:1.3rem;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+.mc{background:rgba(255,255,255,.02);border:1px solid #141428;border-radius:16px;padding:1rem 1.1rem;
+  display:flex;align-items:flex-start;gap:.85rem;transition:border-color .25s,background .25s;}
+.mc:hover{border-color:rgba(168,255,96,.18);background:rgba(168,255,96,.03);}
+.mi{font-size:1.5rem;flex-shrink:0;line-height:1;}
+.mt{font-size:.82rem;font-weight:700;color:#d0d0e8;margin-bottom:.18rem;}
+.md{font-size:.69rem;color:#333358;line-height:1.5;}
 
-/* ── Hero Header ── */
-.hero-wrap {
-    position: relative;
-    text-align: center;
-    padding: 2.5rem 1rem 1.5rem;
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-}
-.hero-glow {
-    position: absolute;
-    top: 0; left: 50%;
-    transform: translateX(-50%);
-    width: 300px; height: 120px;
-    background: radial-gradient(ellipse, rgba(140,255,80,0.18) 0%, transparent 70%);
-    pointer-events: none;
-    border-radius: 50%;
-}
-.hero-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    background: rgba(140,255,80,0.1);
-    border: 1px solid rgba(140,255,80,0.3);
-    color: #a8ff60;
-    padding: 0.3rem 0.9rem;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-}
-.hero-pill::before {
-    content: '';
-    width: 6px; height: 6px;
-    background: #a8ff60;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #a8ff60;
-    animation: pulse-dot 2s infinite;
-}
-@keyframes pulse-dot {
-    0%,100% { opacity:1; transform:scale(1); }
-    50% { opacity:0.5; transform:scale(1.4); }
-}
-.hero-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3.8rem;
-    letter-spacing: 0.04em;
-    line-height: 1;
-    color: #f0f0f8;
-    margin: 0 0 0.4rem;
-}
-.hero-title span {
-    background: linear-gradient(90deg, #a8ff60, #60ffcc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.hero-sub {
-    font-size: 0.85rem;
-    color: #5a5a78;
-    font-weight: 400;
-    letter-spacing: 0.03em;
-}
+.ulbl{font-size:.67rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#30305a;
+  margin:2rem 0 .8rem;display:flex;align-items:center;gap:.7rem;}
+.ulbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#141430,transparent);}
+div[data-testid="stFileUploader"]{background:#07071a!important;border:2px dashed #161634!important;border-radius:20px!important;padding:1.8rem 1.5rem!important;transition:border-color .3s,background .3s!important;}
+div[data-testid="stFileUploader"]:hover{border-color:rgba(168,255,96,.3)!important;background:rgba(168,255,96,.02)!important;}
+div[data-testid="stFileUploader"] p,div[data-testid="stFileUploader"] span,div[data-testid="stFileUploader"] small{color:#282850!important;}
+div[data-testid="stFileUploader"] button{background:#0e0e28!important;border:1px solid #1c1c40!important;color:#6060a0!important;border-radius:10px!important;}
 
-/* ── Security Shield Card ── */
-.shield-intro {
-    background: linear-gradient(135deg, #0e0e1a 0%, #111122 100%);
-    border: 1px solid #1e1e38;
-    border-radius: 20px;
-    padding: 1.4rem 1.6rem;
-    margin: 1rem 0 1.5rem;
-    position: relative;
-    overflow: hidden;
-}
-.shield-intro::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, #a8ff60, transparent);
-    opacity: 0.6;
-}
-.shield-intro-title {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #a8ff60;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.security-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem;
-}
-.sec-check-card {
-    background: #0a0a14;
-    border: 1px solid #1a1a2e;
-    border-radius: 12px;
-    padding: 0.8rem 1rem;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.7rem;
-    transition: border-color 0.2s;
-}
-.sec-check-card:hover { border-color: #2a2a4e; }
-.sec-check-icon {
-    font-size: 1.4rem;
-    line-height: 1;
-    flex-shrink: 0;
-}
-.sec-check-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #d0d0e8;
-    line-height: 1.3;
-}
-.sec-check-desc {
-    font-size: 0.68rem;
-    color: #4a4a68;
-    margin-top: 0.2rem;
-    line-height: 1.4;
-}
+.fpill{display:inline-flex;align-items:center;gap:.5rem;background:#09091c;border:1px solid #141432;border-radius:999px;
+  padding:.38rem 1rem;font-size:.73rem;font-family:'JetBrains Mono',monospace;color:#4a4a80;margin:.6rem 0;}
+.fpill strong{color:#9090c0;}
 
-/* ── File Uploader ── */
-div[data-testid="stFileUploader"] {
-    background: #0c0c18 !important;
-    border: 2px dashed #1e1e38 !important;
-    border-radius: 18px !important;
-    padding: 1.5rem !important;
-    transition: border-color 0.3s !important;
-}
-div[data-testid="stFileUploader"]:hover {
-    border-color: rgba(168,255,96,0.4) !important;
-}
-div[data-testid="stFileUploader"] label {
-    color: #6060a0 !important;
-    font-size: 0.85rem !important;
-}
+.stButton>button{width:100%!important;background:linear-gradient(135deg,#a8ff60 0%,#60ffcc 100%)!important;
+  color:#020208!important;font-family:'Outfit',sans-serif!important;font-weight:900!important;font-size:1rem!important;
+  letter-spacing:.1em!important;text-transform:uppercase!important;border:none!important;border-radius:16px!important;
+  padding:1rem!important;margin-top:.8rem!important;transition:all .25s!important;}
+.stButton>button:hover{transform:translateY(-3px)!important;box-shadow:0 18px 55px rgba(168,255,96,.28),0 4px 14px rgba(168,255,96,.14)!important;}
+.stButton>button:active{transform:translateY(-1px)!important;}
 
-/* ── Buttons ── */
-.stButton > button {
-    width: 100%;
-    background: linear-gradient(135deg, #a8ff60 0%, #60ffcc 100%) !important;
-    color: #050508 !important;
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    border: none !important;
-    border-radius: 14px !important;
-    padding: 0.85rem !important;
-    letter-spacing: 0.04em !important;
-    text-transform: uppercase !important;
-    transition: all 0.2s !important;
-}
-.stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 12px 40px rgba(168,255,96,0.25) !important;
-}
-.stButton > button:active { transform: translateY(0) !important; }
+.slbl{font-size:.67rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#30305a;
+  margin:2rem 0 .8rem;display:flex;align-items:center;gap:.7rem;}
+.slbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,#141430,transparent);}
 
-/* ── Scan result rows ── */
-.scan-row {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 0.7rem 1rem;
-    background: #0c0c18;
-    border: 1px solid #1a1a2e;
-    border-radius: 12px;
-    margin-bottom: 0.5rem;
-    font-size: 0.82rem;
-}
-.scan-icon { font-size: 1.1rem; flex-shrink: 0; }
-.scan-label {
-    font-weight: 600;
-    color: #d0d0e8;
-    min-width: 130px;
-    font-size: 0.8rem;
-}
-.scan-msg { color: #6060a0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; }
-.dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    margin-left: auto;
-}
-.dot-ok   { background: #a8ff60; box-shadow: 0 0 8px rgba(168,255,96,0.6); }
-.dot-warn { background: #ffd060; box-shadow: 0 0 8px rgba(255,208,96,0.6); }
-.dot-err  { background: #ff5080; box-shadow: 0 0 8px rgba(255,80,128,0.6); }
+.srow{display:flex;align-items:center;gap:.9rem;padding:.8rem 1.1rem;background:#07071a;border:1px solid #10102a;
+  border-radius:14px;margin-bottom:.5rem;transition:border-color .2s;}
+.srow:hover{border-color:#181838;}
+.se{font-size:1.15rem;flex-shrink:0;}.sl{font-size:.79rem;font-weight:700;color:#b0b0d8;min-width:145px;}
+.sm{font-size:.71rem;font-family:'JetBrains Mono',monospace;color:#333360;flex:1;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dok{background:#a8ff60;box-shadow:0 0 10px rgba(168,255,96,.65);}
+.derr{background:#ff4060;box-shadow:0 0 10px rgba(255,64,96,.65);}
 
-/* ── Alert boxes ── */
-.alert {
-    border-radius: 14px;
-    padding: 1rem 1.2rem;
-    margin: 0.8rem 0;
-    font-size: 0.83rem;
-    line-height: 1.6;
-}
-.alert-danger { background: rgba(255,50,80,0.08); border: 1px solid rgba(255,50,80,0.3); color: #ff7090; }
-.alert-ok     { background: rgba(168,255,96,0.07); border: 1px solid rgba(168,255,96,0.25); color: #a8ff60; }
-.alert-warn   { background: rgba(255,208,96,0.07); border: 1px solid rgba(255,208,96,0.25); color: #ffd060; }
-.alert-info   { background: rgba(96,200,255,0.07); border: 1px solid rgba(96,200,255,0.25); color: #60c8ff; }
+.ab{border-radius:16px;padding:1rem 1.3rem;margin:.8rem 0;font-size:.85rem;line-height:1.65;font-weight:500;}
+.aok{background:rgba(168,255,96,.07);border:1px solid rgba(168,255,96,.2);color:#a8ff60;}
+.abad{background:rgba(255,64,96,.07);border:1px solid rgba(255,64,96,.2);color:#ff7090;}
+.awarn{background:rgba(255,200,80,.07);border:1px solid rgba(255,200,80,.2);color:#ffc860;}
+.ainfo{background:rgba(96,200,255,.06);border:1px solid rgba(96,200,255,.18);color:#60c8ff;}
 
-/* ── Stats row ── */
-.stat-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.8rem;
-    margin: 1rem 0;
-}
-.stat-card {
-    background: #0c0c18;
-    border: 1px solid #1a1a2e;
-    border-radius: 16px;
-    padding: 1.1rem 0.8rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, #a8ff60, #60ffcc);
-    opacity: 0.5;
-}
-.stat-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    letter-spacing: 0.04em;
-    color: #a8ff60;
-    line-height: 1;
-    margin-bottom: 0.25rem;
-}
-.stat-lbl {
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #3a3a58;
-}
+.s3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1rem 0;}
+.sc{background:linear-gradient(145deg,#07071a,#0a0a1e);border:1px solid #12122e;border-radius:20px;
+  padding:1.3rem 1rem;text-align:center;position:relative;overflow:hidden;transition:border-color .25s,transform .25s;}
+.sc:hover{border-color:#1c1c3e;transform:translateY(-2px);}
+.sc::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(168,255,96,.45),transparent);}
+.sn{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:.06em;color:#a8ff60;line-height:1;margin-bottom:.35rem;}
+.sk{font-size:.62rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#20204a;}
 
-/* ── Result box ── */
-.result-wrap { margin-top: 1rem; }
-.result-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-}
-.result-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #4a4a78;
-}
-.result-box {
-    background: #0c0c18;
-    border: 1px solid #1a1a2e;
-    border-radius: 16px;
-    padding: 1.4rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    line-height: 1.9;
-    color: #c0c0d8;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 420px;
-    overflow-y: auto;
-    position: relative;
-}
-.result-box::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(168,255,96,0.4), transparent);
-}
-.result-box::-webkit-scrollbar { width: 4px; }
-.result-box::-webkit-scrollbar-track { background: transparent; }
-.result-box::-webkit-scrollbar-thumb { background: #2a2a48; border-radius: 4px; }
+.tags{display:flex;flex-wrap:wrap;gap:.4rem;margin:.8rem 0;}
+.rtag{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .8rem;border-radius:999px;
+  font-size:.7rem;font-weight:700;background:rgba(255,80,128,.09);border:1px solid rgba(255,80,128,.25);color:#ff80a8;}
 
-/* ── Redaction tags ── */
-.tags-row { margin: 0.6rem 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.rtag {
-    display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.2rem 0.7rem;
-    border-radius: 999px;
-    font-size: 0.68rem; font-weight: 600;
-    background: rgba(255,80,128,0.1);
-    border: 1px solid rgba(255,80,128,0.3);
-    color: #ff80a8;
-}
+.rbox{background:#050512;border:1px solid #10102a;border-radius:20px;padding:1.5rem;
+  font-family:'JetBrains Mono',monospace;font-size:.77rem;line-height:2;color:#9090c0;
+  white-space:pre-wrap;word-break:break-word;max-height:460px;overflow-y:auto;position:relative;margin-top:.5rem;}
+.rbox::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(168,255,96,.3),transparent);}
+.rbox::-webkit-scrollbar{width:3px;}
+.rbox::-webkit-scrollbar-thumb{background:#181838;border-radius:4px;}
 
-/* ── Section headings ── */
-.section-head {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #4a4a78;
-    margin: 1.5rem 0 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.section-head::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, #1a1a30, transparent);
-}
-
-/* ── Divider ── */
-hr { border-color: #1a1a30 !important; }
-
-/* ── File info pill ── */
-.file-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #0c0c18;
-    border: 1px solid #1e1e38;
-    border-radius: 999px;
-    padding: 0.35rem 0.9rem;
-    font-size: 0.78rem;
-    color: #8080c0;
-    margin: 0.5rem 0;
-    font-family: 'JetBrains Mono', monospace;
-}
+[data-testid="stDownloadButton"] button{background:#08081e!important;border:1px solid #14143a!important;
+  color:#5050a0!important;border-radius:14px!important;font-family:'Outfit',sans-serif!important;
+  font-weight:700!important;font-size:.82rem!important;padding:.75rem!important;width:100%!important;transition:all .2s!important;}
+[data-testid="stDownloadButton"] button:hover{border-color:rgba(168,255,96,.28)!important;color:#a8ff60!important;background:rgba(168,255,96,.04)!important;}
+hr{border-color:#0e0e28!important;margin:1.5rem 0!important;}
 </style>
 """, unsafe_allow_html=True)
 
-# ── HERO ──────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="hero-wrap">
-    <div class="hero-glow"></div>
-    <div class="hero-pill">🔐 Secure · AI-Powered · Private</div>
-    <div class="hero-title">Doc<span>Vault</span></div>
-    <div class="hero-sub">Extract · Scan · Redact · Download — all in one secure pipeline</div>
-</div>
-""", unsafe_allow_html=True)
+# ── SIDEBAR ──
+with st.sidebar:
+    st.markdown("## ⚙️ Settings")
+    st.markdown("---")
+    st.markdown("**🔒 Redaction Rules**")
+    redact_ids       = st.checkbox("🪪 ID / Aadhaar / SSN",       value=True)
+    redact_phones    = st.checkbox("📞 Phone numbers & emails",     value=True)
+    redact_banking   = st.checkbox("💳 Bank / credit card numbers", value=True)
+    redact_passwords = st.checkbox("🔑 Passwords & secret keys",    value=True)
+    redact_names     = st.checkbox("👤 Personal names",              value=True)
+    redact_dates     = st.checkbox("📅 Dates of birth",              value=True)
+    show_redacted    = st.checkbox("Show [REDACTED] placeholders",   value=True)
+    st.markdown("---")
+    st.markdown("**🛡️ Security**")
+    max_size_mb = st.slider("Max file size (MB)", 1, 20, 10)
+    st.markdown("---")
+    st.markdown("<small style='color:#1e1e48'>DocVault AI · v3.1<br>Powered by Groq + LLaMA</small>", unsafe_allow_html=True)
 
-# ── SECURITY FEATURES INTRO ───────────────────────────────────────────
-st.markdown("""
-<div class="shield-intro">
-    <div class="shield-intro-title">🛡️ 4-Layer Security Engine — Active</div>
-    <div class="security-grid">
-        <div class="sec-check-card">
-            <div class="sec-check-icon">📦</div>
-            <div>
-                <div class="sec-check-label">File Size Limit</div>
-                <div class="sec-check-desc">Rejects oversized files before processing begins</div>
-            </div>
-        </div>
-        <div class="sec-check-card">
-            <div class="sec-check-icon">🦠</div>
-            <div>
-                <div class="sec-check-label">Virus / Malware Scan</div>
-                <div class="sec-check-desc">Byte-level signature scan for known exploits & malicious patterns</div>
-            </div>
-        </div>
-        <div class="sec-check-card">
-            <div class="sec-check-icon">🧩</div>
-            <div>
-                <div class="sec-check-label">Corrupted File Detection</div>
-                <div class="sec-check-desc">Files that can't be opened are rejected immediately</div>
-            </div>
-        </div>
-        <div class="sec-check-card">
-            <div class="sec-check-icon">🔍</div>
-            <div>
-                <div class="sec-check-label">File Type Verification</div>
-                <div class="sec-check-desc">Magic-byte check — catches renamed or disguised files</div>
-            </div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# ── SIDEBAR ───────────────────────────────────────────────────────────
-st.sidebar.markdown("## ⚙️ Settings")
-st.sidebar.markdown("**🔒 Redact sensitive data:**")
-redact_ids       = st.sidebar.checkbox("🪪 ID / Aadhaar / SSN numbers",  value=True)
-redact_phones    = st.sidebar.checkbox("📞 Phone numbers & emails",       value=True)
-redact_banking   = st.sidebar.checkbox("💳 Bank / credit card numbers",   value=True)
-redact_passwords = st.sidebar.checkbox("🔑 Passwords & secret keys",      value=True)
-redact_names     = st.sidebar.checkbox("👤 Personal names",                value=True)
-redact_dates     = st.sidebar.checkbox("📅 Dates of birth",                value=True)
-show_redacted    = st.sidebar.checkbox("Show [REDACTED] placeholders",     value=True)
-st.sidebar.markdown("---")
-st.sidebar.markdown("**🛡️ Security Limits:**")
-max_size_mb = st.sidebar.slider("Max file size (MB)", 1, 20, 10)
-st.sidebar.markdown("---")
-st.sidebar.markdown("<small style='color:#3a3a58'>DocVault · AI Extractor · v3.0</small>", unsafe_allow_html=True)
-
-# ════════════════════════════════════════════════════════════════════
-# SECURITY ENGINE
-# ════════════════════════════════════════════════════════════════════
-
+# ── SECURITY ENGINE ──
 MALWARE_SIGNATURES = [
-    b"TVqQAAMAAAAEAAAA",
-    b"\x4d\x5a\x90\x00",
-    b"\x7fELF",
-    b"/JavaScript",
-    b"/JS ",
-    b"eval(",
-    b"unescape(",
-    b"/OpenAction",
-    b"/AA ",
-    b"/Launch",
-    b"cmd.exe",
-    b"powershell",
-    b"WScript",
-    b"ActiveXObject",
-    b"AutoOpen",
-    b"Auto_Open",
-    b"AutoExec",
-    b"Shell(",
-    b"CreateObject(",
-    b"WScript.Shell",
+    b"\x4d\x5a\x90\x00", b"\x7fELF",
+    b"/JavaScript", b"/JS ", b"eval(", b"unescape(",
+    b"/OpenAction", b"/Launch", b"cmd.exe", b"powershell",
+    b"WScript", b"ActiveXObject", b"AutoOpen", b"Auto_Open",
+    b"AutoExec", b"Shell(", b"CreateObject(", b"WScript.Shell",
     b"AAAA" * 20,
 ]
-
-MAGIC_BYTES = {
-    "pdf":  [(0, b"%PDF")],
-    "png":  [(0, b"\x89PNG\r\n\x1a\n")],
-    "jpg":  [(0, b"\xff\xd8\xff")],
-    "jpeg": [(0, b"\xff\xd8\xff")],
-    "docx": [(0, b"PK\x03\x04")],
-    "xlsx": [(0, b"PK\x03\x04")],
-    "pptx": [(0, b"PK\x03\x04")],
-    "ppt":  [(0, b"\xd0\xcf\x11\xe0")],
+MAGIC = {
+    "pdf":[(0,b"%PDF")],"png":[(0,b"\x89PNG\r\n\x1a\n")],
+    "jpg":[(0,b"\xff\xd8\xff")],"jpeg":[(0,b"\xff\xd8\xff")],
+    "docx":[(0,b"PK\x03\x04")],"xlsx":[(0,b"PK\x03\x04")],
+    "pptx":[(0,b"PK\x03\x04")],"ppt":[(0,b"\xd0\xcf\x11\xe0")],
 }
 
-def check_file_size(fb, max_mb):
-    size_mb = len(fb) / (1024 * 1024)
-    if size_mb > max_mb:
-        return False, f"File is {size_mb:.1f} MB — exceeds {max_mb} MB limit"
-    return True, f"Size OK · {size_mb:.1f} MB"
+def ck_size(fb,mx):
+    s=len(fb)/1048576
+    return (True,f"Size OK · {s:.2f} MB") if s<=mx else (False,f"{s:.1f} MB exceeds {mx} MB limit")
 
-def check_magic_bytes(fb, ext):
-    ext = ext.lower().lstrip(".")
-    if ext not in MAGIC_BYTES:
-        return True, "Format check skipped (unknown type)"
-    for offset, magic in MAGIC_BYTES[ext]:
-        if fb[offset:offset+len(magic)] == magic:
-            return True, f"Signature valid · {ext.upper()} confirmed"
-    return False, f"Content mismatch for .{ext} — possible disguised file"
+def ck_magic(fb,ext):
+    e=ext.lower().lstrip(".")
+    if e not in MAGIC: return True,"Format check skipped"
+    for off,m in MAGIC[e]:
+        if fb[off:off+len(m)]==m: return True,f"Signature valid · {e.upper()} confirmed"
+    return False,f"Mismatch for .{e} — possible disguised file"
 
-def check_virus_signatures(fb):
-    hits = []
-    for sig in MALWARE_SIGNATURES:
-        if sig in fb:
-            label = sig.decode("utf-8", errors="replace").strip()[:40]
-            hits.append(label)
-    if hits:
-        return False, f"Suspicious pattern: {', '.join(set(hits[:3]))}"
-    return True, "No malware signatures detected"
+def ck_virus(fb):
+    hits=[s.decode("utf-8",errors="replace").strip()[:30] for s in MALWARE_SIGNATURES if s in fb]
+    return (False,f"Suspicious: {', '.join(set(hits[:3]))}") if hits else (True,"No malware patterns detected")
 
-def check_corruption(fb, ext):
-    ext = ext.lower().lstrip(".")
+def ck_corrupt(fb,ext):
+    e=ext.lower().lstrip(".")
     try:
-        if ext == "pdf":
-            import pypdf
-            r = pypdf.PdfReader(io.BytesIO(fb))
-            _ = len(r.pages)
-        elif ext == "docx":
-            import docx
-            docx.Document(io.BytesIO(fb))
-        elif ext == "xlsx":
-            import openpyxl
-            openpyxl.load_workbook(io.BytesIO(fb), data_only=True)
-        elif ext in ("pptx", "ppt"):
-            from pptx import Presentation
-            Presentation(io.BytesIO(fb))
-        return True, "File opened successfully · Not corrupted"
-    except Exception as e:
-        return False, f"Cannot open file: {str(e)[:100]}"
+        if e=="pdf":
+            import pypdf; r=pypdf.PdfReader(io.BytesIO(fb)); _=len(r.pages)
+        elif e=="docx":
+            import docx; docx.Document(io.BytesIO(fb))
+        elif e=="xlsx":
+            import openpyxl; openpyxl.load_workbook(io.BytesIO(fb),data_only=True)
+        elif e in("pptx","ppt"):
+            from pptx import Presentation; Presentation(io.BytesIO(fb))
+        return True,"Opened successfully · Intact"
+    except Exception as ex:
+        return False,f"Cannot open: {str(ex)[:90]}"
 
-def run_security_scan(fb, filename, max_mb):
-    ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
-    results = []
-    all_passed = True
-    checks = [
-        ("📦 File Size",    check_file_size(fb, max_mb)),
-        ("🔍 File Type",    check_magic_bytes(fb, ext)),
-        ("🦠 Virus Scan",   check_virus_signatures(fb)),
-        ("🧩 Integrity",    check_corruption(fb, ext)),
-    ]
-    for label, (ok, msg) in checks:
-        results.append((label, ok, msg))
-        if not ok:
-            all_passed = False
-    return all_passed, results
+def security_scan(fb,fname,mx):
+    ext=fname.rsplit(".",1)[-1] if "." in fname else ""
+    checks=[("📦 File Size",ck_size(fb,mx)),("🔍 File Type",ck_magic(fb,ext)),
+            ("🦠 Virus Scan",ck_virus(fb)),("🧩 Integrity",ck_corrupt(fb,ext))]
+    results=[(lbl,ok,msg) for lbl,(ok,msg) in checks]
+    return all(ok for _,ok,_ in results),results
 
-# ── Redaction helpers ─────────────────────────────────────────────────
-def build_redaction_prompt():
-    rules = []
-    if redact_ids:       rules.append("Aadhaar numbers (12-digit), SSN, PAN card numbers (ABCDE1234F), passport, driving license, voter ID, any government ID")
-    if redact_phones:    rules.append("phone numbers, mobile numbers (+91 or 10-digit), email addresses")
-    if redact_banking:   rules.append("bank account numbers, IFSC codes, credit card/debit card numbers, CVV, UPI IDs, MICR codes")
-    if redact_passwords: rules.append("passwords, API keys, secret keys, tokens, OTPs, PINs")
-    if redact_names:     rules.append("full names of any person on identity documents")
-    if redact_dates:     rules.append("dates of birth in any format, DOB, Year of Birth, जन्म तिथि")
-    return rules
-
-def extract_from_pdf(file_bytes):
+# ── EXTRACTION ──
+def pdf_text(fb):
     try:
-        import pypdf
-        reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-        return ("".join(p.extract_text() or "" for p in reader.pages)).strip() or None
+        import pypdf; r=pypdf.PdfReader(io.BytesIO(fb))
+        return ("".join(p.extract_text() or "" for p in r.pages)).strip() or None
     except: return None
 
-def extract_from_docx(file_bytes):
+def docx_text(fb):
     try:
-        import docx
-        doc = docx.Document(io.BytesIO(file_bytes))
+        import docx; doc=docx.Document(io.BytesIO(fb))
         return "\n".join(p.text for p in doc.paragraphs if p.text.strip()).strip() or None
     except: return None
 
-def extract_from_xlsx(file_bytes):
+def xlsx_text(fb):
     try:
-        import openpyxl
-        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
-        rows = []
-        for sheet in wb.worksheets:
-            rows.append(f"[Sheet: {sheet.title}]")
-            for row in sheet.iter_rows(values_only=True):
-                line = " | ".join(str(c) for c in row if c is not None)
-                if line.strip(): rows.append(line)
+        import openpyxl; wb=openpyxl.load_workbook(io.BytesIO(fb),data_only=True); rows=[]
+        for s in wb.worksheets:
+            rows.append(f"[Sheet: {s.title}]")
+            for row in s.iter_rows(values_only=True):
+                l=" | ".join(str(c) for c in row if c is not None)
+                if l.strip(): rows.append(l)
         return "\n".join(rows).strip() or None
     except: return None
 
-def extract_from_pptx(file_bytes):
+def pptx_text(fb):
     try:
-        from pptx import Presentation
-        prs = Presentation(io.BytesIO(file_bytes))
-        lines = []
-        for i, slide in enumerate(prs.slides, 1):
+        from pptx import Presentation; prs=Presentation(io.BytesIO(fb)); lines=[]
+        for i,slide in enumerate(prs.slides,1):
             lines.append(f"[Slide {i}]")
             for shape in slide.shapes:
-                if hasattr(shape, "text") and shape.text.strip():
-                    lines.append(shape.text.strip())
+                if hasattr(shape,"text") and shape.text.strip(): lines.append(shape.text.strip())
         return "\n".join(lines).strip() or None
     except: return None
 
-def extract_from_image(file_bytes, mime_type):
-    b64 = base64.b64encode(file_bytes).decode("utf-8")
-    response = client.chat.completions.create(
+def img_text(fb,mime):
+    b64=base64.b64encode(fb).decode()
+    r=client.chat.completions.create(
         model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
-            {"type": "text", "text": """Analyze this image:
-1. Extract ALL visible text exactly as it appears
-2. If little/no text, describe in detail
+        messages=[{"role":"user","content":[
+            {"type":"image_url","image_url":{"url":f"data:{mime};base64,{b64}"}},
+            {"type":"text","text":"Extract ALL visible text.\nTEXT FOUND:\n[text]\n\nIMAGE DESCRIPTION:\n[description]"}
+        ]}],max_tokens=2000)
+    return r.choices[0].message.content.strip()
 
-Format:
-TEXT FOUND:
-[text or 'No readable text found']
+# ── REDACTION ──
+def build_rules():
+    rules=[]
+    if redact_ids:       rules.append("Aadhaar (12-digit), SSN, PAN (ABCDE1234F), passport, driver license, voter ID")
+    if redact_phones:    rules.append("phone/mobile (+91 or 10-digit), email addresses")
+    if redact_banking:   rules.append("bank account, IFSC, credit/debit card numbers, CVV, UPI IDs")
+    if redact_passwords: rules.append("passwords, API keys, tokens, OTPs, PINs, secret keys")
+    if redact_names:     rules.append("full person names on identity documents")
+    if redact_dates:     rules.append("dates of birth in any format, DOB, janm tithi")
+    return rules
 
-IMAGE DESCRIPTION:
-[detailed description]"""}
-        ]}],
-        max_tokens=2000
-    )
-    return response.choices[0].message.content.strip()
-
-def regex_redact(text, placeholder="[REDACTED]"):
-    count = 0; removed = []
+def regex_redact(text,ph="[REDACTED]"):
+    count=0; removed=[]
+    def sub(pat,label,t):
+        nonlocal count
+        n=re.sub(pat,ph,t)
+        if n!=t: count+=1; removed.append(label)
+        return n
     if redact_ids:
-        n = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b', placeholder, text)
-        if n != text: count += 1; removed.append("Aadhaar number"); text = n
-        n = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', placeholder, text)
-        if n != text: count += 1; removed.append("PAN number"); text = n
+        text=sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b',"Aadhaar",text)
+        text=sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b',"PAN",text)
     if redact_phones:
-        n = re.sub(r'\b(\+91[\s-]?)?[6-9]\d{9}\b', placeholder, text)
-        if n != text: count += 1; removed.append("phone number"); text = n
-        n = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', placeholder, text)
-        if n != text: count += 1; removed.append("email address"); text = n
+        text=sub(r'\b(\+91[\s-]?)?[6-9]\d{9}\b',"phone",text)
+        text=sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', "email",text)
     if redact_banking:
-        n = re.sub(r'\b(?:\d[ -]*?){13,16}\b', placeholder, text)
-        if n != text: count += 1; removed.append("card number"); text = n
-        n = re.sub(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', placeholder, text)
-        if n != text: count += 1; removed.append("IFSC code"); text = n
+        text=sub(r'\b(?:\d[ -]*?){13,16}\b',"card number",text)
+        text=sub(r'\b[A-Z]{4}0[A-Z0-9]{6}\b',"IFSC",text)
     if redact_dates:
-        n = re.sub(r'\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b', placeholder, text)
-        if n != text: count += 1; removed.append("date of birth"); text = n
+        text=sub(r'\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b',"date",text)
     if redact_names:
-        n = re.sub(r'(Name|नाम)\s*[:\-]\s*[A-Za-z\s]{3,40}',
-                   lambda m: m.group(0).split(':')[0] + ': ' + placeholder, text)
-        if n != text: count += 1; removed.append("name field"); text = n
-    return text, removed, count
+        n=re.sub(r'(Name|naam)\s*[:\-]\s*[A-Za-z\s]{3,40}',
+                 lambda m:m.group(0).split(':')[0]+': '+ph,text)
+        if n!=text: count+=1; removed.append("name"); text=n
+    return text,removed,count
 
-def redact_sensitive(text, rules):
-    if not rules: return text, [], 0
-    placeholder = "[REDACTED]" if show_redacted else "████"
-    prompt = f"""You are a strict enterprise data privacy engine. Redact ALL sensitive information.
-
-REDACT THESE CATEGORIES:
+def redact_ai(text,rules):
+    if not rules: return text,[],0
+    ph="[REDACTED]" if show_redacted else "████"
+    prompt=f"""Strict data privacy engine. Redact ALL sensitive data.
+CATEGORIES:
 {chr(10).join(f'- {r}' for r in rules)}
-
-RULES:
-- Replace ONLY the sensitive value with "{placeholder}", preserve all surrounding text
-- When uncertain — REDACT it
-
-Return ONLY valid JSON:
-{{"clean_text": "...", "redacted_items": ["..."], "redaction_count": 0}}
-
+Replace only the sensitive VALUE with "{ph}". When uncertain REDACT.
+Return ONLY valid JSON: {{"clean_text":"...","redacted_items":["..."],"redaction_count":0}}
 TEXT:
 {text[:6000]}"""
-
-    response = client.chat.completions.create(
+    r=client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": "You are a strict data privacy engine. Return only valid JSON."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.0, max_tokens=4000
-    )
-    raw     = response.choices[0].message.content.strip()
-    cleaned = re.sub(r'```json|```', '', raw).strip()
+        messages=[{"role":"system","content":"Data privacy engine. Return only valid JSON."},{"role":"user","content":prompt}],
+        temperature=0.0,max_tokens=4000)
+    raw=re.sub(r'```json|```','',r.choices[0].message.content.strip()).strip()
     try:
-        result    = json.loads(cleaned)
-        clean     = result.get("clean_text", text)
-        items     = result.get("redacted_items", [])
-        count     = result.get("redaction_count", 0)
-        clean, extra_items, extra_count = regex_redact(clean, placeholder)
-        return clean, items + extra_items, count + extra_count
+        d=json.loads(raw); clean=d.get("clean_text",text); items=d.get("redacted_items",[]); count=d.get("redaction_count",0)
+        clean,ei,ec=regex_redact(clean,ph)
+        return clean,items+ei,count+ec
     except:
-        return regex_redact(text, placeholder)
+        return regex_redact(text,ph)
 
-# ── UPLOAD ────────────────────────────────────────────────────────────
-st.markdown('<div class="section-head">📎 Upload Document</div>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════
+# RENDER UI
+# ══════════════════════════════════════════════
+
+st.markdown("""
+<div class="hero">
+  <div class="hero-glow"></div>
+  <div class="badge"><span class="bdot"></span>AI-Powered &nbsp;·&nbsp; Secure &nbsp;·&nbsp; Private</div>
+  <div class="htitle">Doc<span class="g">Vault</span></div>
+  <div class="hsub">Extract text from any document or image —<br>sensitive data auto-redacted before your eyes.</div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="sec-card">
+  <div class="shead">🛡️ &nbsp;4-Layer Security Engine &nbsp;·&nbsp; Always Active</div>
+  <div class="g2">
+    <div class="mc"><div class="mi">📦</div><div><div class="mt">File Size Limit</div><div class="md">Oversized files rejected instantly before any processing begins</div></div></div>
+    <div class="mc"><div class="mi">🦠</div><div><div class="mt">Virus / Malware Scan</div><div class="md">Byte-level scan: PE headers, JS injections, macro exploits and more</div></div></div>
+    <div class="mc"><div class="mi">🧩</div><div><div class="mt">Corrupted File Detection</div><div class="md">Files that cannot be opened are rejected — no broken data passes</div></div></div>
+    <div class="mc"><div class="mi">🔍</div><div><div class="mt">File Type Verification</div><div class="md">Magic-byte fingerprinting catches renamed or disguised malicious files</div></div></div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="ulbl">📎 Upload Document</div>', unsafe_allow_html=True)
 
 uploaded = st.file_uploader(
-    "Upload a document or image",
-    type=["pdf", "png", "jpg", "jpeg", "docx", "xlsx", "pptx", "ppt"],
+    "drop", type=["pdf","png","jpg","jpeg","docx","xlsx","pptx","ppt"],
     label_visibility="collapsed"
 )
 
 if uploaded:
     st.markdown(
-        f'<div class="file-pill">📄 {uploaded.name} &nbsp;·&nbsp; {uploaded.type} &nbsp;·&nbsp; {uploaded.size/1024:.1f} KB</div>',
-        unsafe_allow_html=True
-    )
+        f'<div class="fpill">📄 <strong>{uploaded.name}</strong>'
+        f'&nbsp;·&nbsp;{uploaded.type}&nbsp;·&nbsp;{uploaded.size/1024:.1f} KB</div>',
+        unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-run = st.button("🔐 Scan · Extract · Redact", use_container_width=True)
+run = st.button("🔐  Scan · Extract · Redact", use_container_width=True)
 
-# ── PROCESS ───────────────────────────────────────────────────────────
 if run and not uploaded:
-    st.markdown('<div class="alert alert-warn">⚠️ Please upload a file first.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ab awarn">⚠️ Please upload a file first.</div>', unsafe_allow_html=True)
     st.stop()
 
 if run and uploaded:
-    file_bytes = uploaded.read()
-    mime       = uploaded.type
-    name       = uploaded.name.lower()
+    fb=uploaded.read(); mime=uploaded.type; name=uploaded.name.lower()
 
-    # ── STEP 1: SECURITY SCAN ──
-    st.markdown('<div class="section-head">🛡️ Security Scan</div>', unsafe_allow_html=True)
+    # STEP 1 — SCAN
+    st.markdown('<div class="slbl">🛡️ Security Scan Results</div>', unsafe_allow_html=True)
+    with st.spinner("Running security checks..."):
+        passed,results=security_scan(fb,name,max_size_mb)
 
-    with st.spinner("Running 4-layer security checks..."):
-        passed, scan_results = run_security_scan(file_bytes, name, max_size_mb)
-
-    for check_name, ok, msg in scan_results:
-        dot_cls  = "dot-ok" if ok else "dot-err"
-        icon     = "✅" if ok else "❌"
+    for lbl,ok,msg in results:
+        emoji=lbl.split()[0]; label=" ".join(lbl.split()[1:])
+        dc="dok" if ok else "derr"; icon="✅" if ok else "❌"
         st.markdown(
-            f'<div class="scan-row">'
-            f'<span class="scan-icon">{check_name.split()[0]}</span>'
-            f'<span class="scan-label">{" ".join(check_name.split()[1:])}</span>'
-            f'<span class="scan-msg">{icon}&nbsp; {msg}</span>'
-            f'<span class="dot {dot_cls}"></span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+            f'<div class="srow"><span class="se">{emoji}</span>'
+            f'<span class="sl">{label}</span>'
+            f'<span class="sm">{icon}&nbsp; {msg}</span>'
+            f'<span class="dot {dc}"></span></div>',
+            unsafe_allow_html=True)
 
     if not passed:
-        st.markdown("""
-        <div class="alert alert-danger">
-            🚫 <strong>File rejected.</strong> One or more security checks failed.<br>
-            Please upload a clean, valid, non-corrupted file.
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="ab abad">🚫 <strong>File rejected.</strong> One or more security checks failed. Please upload a clean, valid file.</div>', unsafe_allow_html=True)
         st.stop()
+    st.markdown('<div class="ab aok">✅ <strong>All 4 security checks passed.</strong> Proceeding to extraction.</div>', unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="alert alert-ok">
-        ✅ <strong>All 4 security checks passed.</strong> Proceeding to extraction.
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── STEP 2: EXTRACT TEXT ──
-    st.markdown('<div class="section-head">📖 Text Extraction</div>', unsafe_allow_html=True)
-    raw_text = None
-
-    with st.spinner("Extracting text from document..."):
+    # STEP 2 — EXTRACT
+    st.markdown('<div class="slbl">📖 Text Extraction</div>', unsafe_allow_html=True)
+    raw=None
+    with st.spinner("Extracting content..."):
         try:
             if name.endswith(".pdf"):
-                raw_text = extract_from_pdf(file_bytes)
-                if not raw_text:
-                    st.markdown('<div class="alert alert-info">ℹ️ Native PDF extraction failed — switching to AI Vision OCR...</div>', unsafe_allow_html=True)
-                    raw_text = extract_from_image(file_bytes, "application/pdf")
-            elif name.endswith((".png", ".jpg", ".jpeg")):
-                raw_text = extract_from_image(file_bytes, mime)
-            elif name.endswith(".docx"):
-                raw_text = extract_from_docx(file_bytes)
-            elif name.endswith(".xlsx"):
-                raw_text = extract_from_xlsx(file_bytes)
-            elif name.endswith((".pptx", ".ppt")):
-                raw_text = extract_from_pptx(file_bytes)
-                if not raw_text:
-                    raw_text = extract_from_image(file_bytes, mime)
+                raw=pdf_text(fb)
+                if not raw:
+                    st.markdown('<div class="ab ainfo">ℹ️ Native extraction failed — switching to AI Vision OCR...</div>', unsafe_allow_html=True)
+                    raw=img_text(fb,"application/pdf")
+            elif name.endswith((".png",".jpg",".jpeg")): raw=img_text(fb,mime)
+            elif name.endswith(".docx"):  raw=docx_text(fb)
+            elif name.endswith(".xlsx"):  raw=xlsx_text(fb)
+            elif name.endswith((".pptx",".ppt")):
+                raw=pptx_text(fb)
+                if not raw: raw=img_text(fb,mime)
         except Exception as e:
-            st.markdown(f'<div class="alert alert-danger">❌ Extraction error: {e}</div>', unsafe_allow_html=True)
-            raw_text = None
+            st.markdown(f'<div class="ab abad">❌ Extraction error: {e}</div>', unsafe_allow_html=True)
 
-    if not raw_text or len(raw_text.strip()) < 5:
-        st.markdown("""
-        <div class="alert alert-warn">
-            ⚠️ <strong>No text could be extracted.</strong><br>
-            The file passed security checks but contains no readable content.
-            It may be a blank document or a pure image with no OCR data.
-        </div>
-        """, unsafe_allow_html=True)
+    if not raw or len(raw.strip())<5:
+        st.markdown('<div class="ab awarn">⚠️ No readable text found. File may be blank or unsupported.</div>', unsafe_allow_html=True)
         st.stop()
 
-    # ── STEP 3: REDACT ──
-    st.markdown('<div class="section-head">🔒 Privacy Redaction</div>', unsafe_allow_html=True)
-    rules      = build_redaction_prompt()
-    clean_text = raw_text
-    items      = []
-    count      = 0
-
+    # STEP 3 — REDACT
+    st.markdown('<div class="slbl">🔒 Privacy Redaction</div>', unsafe_allow_html=True)
+    rules=build_rules(); clean=raw; items=[]; count=0
     if rules:
         with st.spinner("AI scanning for sensitive data..."):
-            try:
-                clean_text, items, count = redact_sensitive(raw_text, rules)
+            try:    clean,items,count=redact_ai(raw,rules)
             except Exception as e:
-                st.markdown(f'<div class="alert alert-warn">⚠️ AI redaction failed, using regex fallback: {e}</div>', unsafe_allow_html=True)
-                clean_text, items, count = regex_redact(raw_text)
+                st.markdown(f'<div class="ab awarn">⚠️ AI redaction unavailable, regex fallback: {e}</div>', unsafe_allow_html=True)
+                clean,items,count=regex_redact(raw)
     else:
-        st.markdown('<div class="alert alert-info">ℹ️ No redaction rules selected — displaying full extracted text.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="ab ainfo">ℹ️ No redaction rules selected.</div>', unsafe_allow_html=True)
 
-    # ── STEP 4: RESULTS ──
-    st.markdown('<div class="section-head">📊 Results</div>', unsafe_allow_html=True)
-
-    word_count = len(clean_text.split())
-    char_count = len(clean_text)
-    status     = "CLEAN" if count == 0 else "REDACTED"
-    status_col = "#a8ff60" if count == 0 else "#ff80a8"
-
+    # STEP 4 — RESULTS
+    st.markdown('<div class="slbl">📊 Results</div>', unsafe_allow_html=True)
+    wc=len(clean.split()); stat="CLEAN" if count==0 else "REDACTED"; sc="#a8ff60" if count==0 else "#ff80a8"
     st.markdown(f"""
-    <div class="stat-row">
-        <div class="stat-card">
-            <div class="stat-num">{word_count:,}</div>
-            <div class="stat-lbl">Words Extracted</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-num">{count}</div>
-            <div class="stat-lbl">Items Redacted</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-num" style="color:{status_col};font-size:1.3rem;padding-top:0.3rem">{status}</div>
-            <div class="stat-lbl">Document Status</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    <div class="s3">
+      <div class="sc"><div class="sn">{wc:,}</div><div class="sk">Words Extracted</div></div>
+      <div class="sc"><div class="sn">{count}</div><div class="sk">Items Redacted</div></div>
+      <div class="sc"><div class="sn" style="color:{sc};font-size:1.7rem;padding-top:.5rem">{stat}</div><div class="sk">Document Status</div></div>
+    </div>""", unsafe_allow_html=True)
 
     if items:
-        tags = "".join(f'<span class="rtag">🚫 {i}</span>' for i in set(items))
-        st.markdown(f'<div class="tags-row">{tags}</div>', unsafe_allow_html=True)
+        tags="".join(f'<span class="rtag">🚫 {i}</span>' for i in set(items))
+        st.markdown(f'<div class="tags">{tags}</div>', unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="result-wrap">
-        <div class="result-header">
-            <span class="result-label">📝 Extracted Text</span>
-        </div>
-    """, unsafe_allow_html=True)
-    st.markdown(f'<div class="result-box">{clean_text}</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="slbl">📝 Extracted Text</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="rbox">{clean}</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col_a, col_b = st.columns(2)
-    col_a.download_button(
-        "⬇️ Download Clean Text (.txt)",
-        clean_text, f"{uploaded.name}_extracted.txt", "text/plain",
-        use_container_width=True
-    )
-    col_b.download_button(
-        "⬇️ Download as JSON",
-        json.dumps({
-            "filename": uploaded.name,
-            "extracted_text": clean_text,
-            "redacted_count": count,
-            "redacted_categories": list(set(items)),
-            "security_scan": {r[0]: r[1] for r in scan_results}
-        }, indent=2),
-        f"{uploaded.name}_extracted.json", "application/json",
-        use_container_width=True
-    )
+    c1,c2=st.columns(2)
+    with c1:
+        st.download_button("⬇️ Download Clean Text (.txt)", clean,
+            f"{uploaded.name}_extracted.txt","text/plain",use_container_width=True)
+    with c2:
+        st.download_button("⬇️ Download as JSON",
+            json.dumps({"filename":uploaded.name,"extracted_text":clean,
+                "redacted_count":count,"redacted_categories":list(set(items)),
+                "security_scan":{r[0]:r[1] for r in results}},indent=2),
+            f"{uploaded.name}_extracted.json","application/json",use_container_width=True)
