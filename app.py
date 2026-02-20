@@ -1,11 +1,7 @@
 import streamlit as st
 import io
 import re
-import json
 
-# ─────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────
 st.set_page_config(
     page_title="DocVault Secure Extractor",
     page_icon="🔐",
@@ -13,37 +9,78 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────
-# SIMPLE CLEAN UI
+# UI STYLE
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
 body {background-color:#070714;}
 .hero {text-align:center;padding:3rem 0;}
 .hero h1 {font-size:3.5rem;}
-.sec-head {margin-top:2rem;font-weight:700;color:#888;}
-.stButton>button {background:linear-gradient(135deg,#90ff50,#40ffc8);
-color:#000;font-weight:700;border-radius:12px;}
+.sec-head {margin-top:2.2rem;font-weight:700;color:#8a8ad8;}
+.card {
+    background:#0e0e1f;
+    border:1px solid #1b1b3a;
+    border-radius:14px;
+    padding:1rem 1.2rem;
+    margin-bottom:0.8rem;
+}
+.pass {color:#90ff50;}
+.fail {color:#ff5f5f;}
+.stButton>button {
+    background:linear-gradient(135deg,#90ff50,#40ffc8);
+    color:#000;font-weight:700;border-radius:12px;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# ─────────────────────────────────────────
+# HERO
+# ─────────────────────────────────────────
 st.markdown("""
 <div class="hero">
 <h1>Doc<span style="color:#90ff50;">Vault</span></h1>
-<p>Secure document extraction with automatic redaction.</p>
+<p>Enterprise-grade secure document extraction & validation</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
-# SECURITY SETTINGS
+# PASSING REQUIREMENTS (BEFORE UPLOAD)
 # ─────────────────────────────────────────
-st.markdown("### 🛡 Security Settings")
-max_size_mb = st.slider("Max file size (MB)", 1, 20, 10)
+st.markdown("### 🛡 Security Requirements")
+
+st.markdown("""
+<div class="card pass">
+✔ Supported Formats: PDF, DOCX, XLSX, PPTX, PPT, TXT
+</div>
+
+<div class="card pass">
+✔ File Type Verification (Magic Byte Validation)
+</div>
+
+<div class="card pass">
+✔ Malware Signature Scan
+</div>
+
+<div class="card pass">
+✔ Corruption / Integrity Check
+</div>
+
+<div class="card fail">
+✖ Executable files (.exe, .bat, .js) will be blocked
+</div>
+
+<div class="card fail">
+✖ Disguised or renamed malicious files will be rejected
+</div>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # FILE UPLOAD
 # ─────────────────────────────────────────
+st.markdown("### 📎 Upload Document")
+
 uploaded = st.file_uploader(
-    "Upload file",
+    "Upload your secure document",
     type=["pdf","docx","xlsx","pptx","ppt","txt"]
 )
 
@@ -63,20 +100,16 @@ MAGIC_BYTES = {
     "ppt": b"\xd0\xcf\x11\xe0",
 }
 
-def check_size(file_bytes):
-    size_mb = len(file_bytes)/(1024*1024)
-    return size_mb <= max_size_mb, f"{size_mb:.2f} MB"
-
 def check_magic(file_bytes, ext):
     if ext in MAGIC_BYTES:
-        return file_bytes.startswith(MAGIC_BYTES[ext]), "Magic byte validation"
-    return True, "Skipped"
+        return file_bytes.startswith(MAGIC_BYTES[ext])
+    return True
 
 def check_malware(file_bytes):
     for sig in MALWARE_SIGS:
         if sig in file_bytes:
-            return False, f"Malware signature detected: {sig.decode(errors='ignore')}"
-    return True, "No malware signatures"
+            return False
+    return True
 
 def check_integrity(file_bytes, ext):
     try:
@@ -92,9 +125,9 @@ def check_integrity(file_bytes, ext):
         elif ext in ["pptx","ppt"]:
             from pptx import Presentation
             Presentation(io.BytesIO(file_bytes))
-        return True, "File opened successfully"
+        return True
     except:
-        return False, "File corrupted or unreadable"
+        return False
 
 # ─────────────────────────────────────────
 # EXTRACTION
@@ -142,32 +175,29 @@ def extract_text(file_bytes, ext):
 if st.button("🔐 Secure Extract"):
 
     if not uploaded:
-        st.warning("Upload file first.")
+        st.warning("Upload a file first.")
     else:
         file_bytes = uploaded.read()
         ext = uploaded.name.split(".")[-1].lower()
 
-        st.markdown("### 🔍 Security Scan")
+        st.markdown("### 🔍 Running Security Scan")
 
-        s_ok, s_msg = check_size(file_bytes)
-        st.write("📦 File Size:", s_msg, "✅" if s_ok else "❌")
+        magic_ok = check_magic(file_bytes, ext)
+        malware_ok = check_malware(file_bytes)
+        integrity_ok = check_integrity(file_bytes, ext)
 
-        m_ok, m_msg = check_magic(file_bytes, ext)
-        st.write("🔎 Type Validation:", m_msg, "✅" if m_ok else "❌")
+        st.write("File Type Check:", "✅" if magic_ok else "❌")
+        st.write("Malware Scan:", "✅" if malware_ok else "❌")
+        st.write("Integrity Check:", "✅" if integrity_ok else "❌")
 
-        v_ok, v_msg = check_malware(file_bytes)
-        st.write("🦠 Malware Scan:", v_msg, "✅" if v_ok else "❌")
-
-        i_ok, i_msg = check_integrity(file_bytes, ext)
-        st.write("🧩 Integrity Check:", i_msg, "✅" if i_ok else "❌")
-
-        if not (s_ok and m_ok and v_ok and i_ok):
-            st.error("🚫 File blocked due to failed security checks.")
+        if not (magic_ok and malware_ok and integrity_ok):
+            st.error("🚫 File blocked due to security failure.")
             st.stop()
 
-        st.success("✅ All security checks passed.")
+        st.success("✅ File passed all security layers.")
 
         st.markdown("### 📄 Extracted Text")
+
         text = extract_text(file_bytes, ext)
 
         if text:
