@@ -193,7 +193,28 @@ div[data-testid="stFileUploadDropzone"] small { color:rgba(255,255,255,0.1) !imp
 .f4{background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);color:#34d399;}
 .f5{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:#fbbf24;}
 
-/* ═══ BUTTON ═══ */
+/* ═══ TAB BUTTONS ═══ */
+div[data-testid="stHorizontalBlock"] .stButton > button {
+    background: rgba(255,255,255,0.04) !important;
+    color: rgba(255,255,255,0.4) !important;
+    font-size: 0.75rem !important; font-weight: 600 !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    border-radius: 8px !important; padding: 0.45rem 0.5rem !important;
+    box-shadow: none !important; margin-top: 0 !important;
+}
+div[data-testid="stHorizontalBlock"] .stButton > button:hover {
+    background: rgba(180,255,50,0.08) !important;
+    border-color: rgba(180,255,50,0.2) !important;
+    color: #b4ff32 !important; transform: none !important;
+    box-shadow: none !important;
+}
+div[data-testid="stHorizontalBlock"] .stButton > button[kind="primary"] {
+    background: rgba(180,255,50,0.12) !important;
+    border-color: rgba(180,255,50,0.3) !important;
+    color: #b4ff32 !important;
+}
+
+/* ═══ MAIN EXTRACT BUTTON ═══ */
 .stButton > button {
     width:100% !important; margin-top:1rem !important;
     background:#b4ff32 !important; color:#080c0f !important;
@@ -333,8 +354,8 @@ redact_ids       = st.sidebar.checkbox("🪪  Aadhaar · SSN · PAN",      value
 redact_phones    = st.sidebar.checkbox("📞  Phone & Email",             value=True)
 redact_banking   = st.sidebar.checkbox("💳  Bank · Cards · UPI",       value=True)
 redact_passwords = st.sidebar.checkbox("🔑  Passwords · Keys",         value=True)
-redact_names     = st.sidebar.checkbox("👤  Personal Names",            value=False)
-redact_dates     = st.sidebar.checkbox("📅  Dates of Birth",            value=False)
+redact_names     = st.sidebar.checkbox("👤  Personal Names",            value=True)
+redact_dates     = st.sidebar.checkbox("📅  Dates of Birth",            value=True)
 
 st.sidebar.markdown("""<div class="sb-section"><div class="sb-section-label">Output</div></div>""", unsafe_allow_html=True)
 show_redacted = st.sidebar.checkbox("Show [REDACTED] tags", value=True)
@@ -360,19 +381,106 @@ st.sidebar.markdown(f"""
 st.markdown('<div class="main-wrap">', unsafe_allow_html=True)
 
 # Top nav
-st.markdown("""
-<div class="top-nav">
-    <div class="nav-tabs">
-        <div class="nav-tab active">Extract</div>
-        <div class="nav-tab">History</div>
-        <div class="nav-tab">Settings</div>
-    </div>
-    <div class="nav-status">
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "Extract"
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+tab_col1, tab_col2, tab_col3, _, status_col = st.columns([1.2, 1.2, 1.2, 5, 2.5])
+with tab_col1:
+    if st.button("⚡ Extract", use_container_width=True,
+                 type="primary" if st.session_state.active_tab=="Extract" else "secondary"):
+        st.session_state.active_tab = "Extract"
+with tab_col2:
+    if st.button("🕓 History", use_container_width=True,
+                 type="primary" if st.session_state.active_tab=="History" else "secondary"):
+        st.session_state.active_tab = "History"
+with tab_col3:
+    if st.button("⚙️ Settings", use_container_width=True,
+                 type="primary" if st.session_state.active_tab=="Settings" else "secondary"):
+        st.session_state.active_tab = "Settings"
+with status_col:
+    st.markdown("""
+    <div class="nav-status" style="justify-content:flex-end;padding-top:0.4rem">
         <div class="status-dot"></div>
         <div class="status-text">AI Engine Online</div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+st.markdown('<div class="g-line"></div>', unsafe_allow_html=True)
+
+# ── HISTORY TAB ───────────────────────────────────────────────────────
+if st.session_state.active_tab == "History":
+    st.markdown("""
+    <div class="hero" style="margin-bottom:1.2rem">
+        <div class="hero-label">🕓 Extraction History</div>
+        <div class="hero-h1" style="font-size:2.5rem">Recent <em>Sessions</em></div>
+    </div>
+    """, unsafe_allow_html=True)
+    if not st.session_state.history:
+        st.markdown("""
+        <div class="card" style="text-align:center;padding:3rem">
+            <div style="font-size:2.5rem;margin-bottom:1rem">📂</div>
+            <div style="color:rgba(255,255,255,0.3);font-size:0.9rem">No extraction history yet.<br>Upload a document to get started.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        for h in st.session_state.history:
+            color = "#b4ff32" if h["status"]=="CLEAN" else "#fb923c"
+            st.markdown(f"""
+            <div class="card" style="margin-bottom:0.8rem;padding:1rem 1.5rem">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <div style="font-size:0.82rem;font-weight:700;color:#fff">📎 {h['name']}</div>
+                        <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);margin-top:0.2rem;font-family:Fira Code,monospace">{h['words']:,} words · {h['redacted']} redacted · {h['time']}</div>
+                    </div>
+                    <div style="font-family:Fira Code,monospace;font-size:0.72rem;color:{color};background:rgba(255,255,255,0.05);padding:0.3rem 0.8rem;border-radius:8px;border:1px solid {color}33">{h['status']}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        if st.button("🗑️ Clear History", use_container_width=True):
+            st.session_state.history = []
+            st.rerun()
+    st.stop()
+
+# ── SETTINGS TAB ──────────────────────────────────────────────────────
+if st.session_state.active_tab == "Settings":
+    st.markdown("""
+    <div class="hero" style="margin-bottom:1.2rem">
+        <div class="hero-label">⚙️ Configuration</div>
+        <div class="hero-h1" style="font-size:2.5rem">App <em>Settings</em></div>
+    </div>
+    """, unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("""
+        <div class="card" style="padding:1.5rem">
+            <div class="card-title" style="margin-bottom:1rem">🤖 AI Model Info</div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        <div class="shield-list">
+            <div class="shield-item on"><span class="shield-label">Extraction Model</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">LLaMA 4 Scout Vision</span></div>
+            <div class="shield-item on"><span class="shield-label">Redaction Model</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">LLaMA 3.1-8B Instant</span></div>
+            <div class="shield-item on"><span class="shield-label">API Provider</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">Groq Cloud</span></div>
+            <div class="shield-item on"><span class="shield-label">Temperature</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">0.0 (deterministic)</span></div>
+            <div class="shield-item on"><span class="shield-label">Redaction Layers</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">AI + Regex fallback</span></div>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+        <div class="card" style="padding:1.5rem">
+            <div class="card-title" style="margin-bottom:1rem">📁 Supported Formats</div>
+            <div class="shield-list">
+                <div class="shield-item on"><span class="shield-label">📄 PDF</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">pypdf + Vision fallback</span></div>
+                <div class="shield-item on"><span class="shield-label">🖼️ Images</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">JPG, PNG via Vision OCR</span></div>
+                <div class="shield-item on"><span class="shield-label">📝 DOCX</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">python-docx</span></div>
+                <div class="shield-item on"><span class="shield-label">📊 XLSX</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">openpyxl all sheets</span></div>
+                <div class="shield-item on"><span class="shield-label">📑 PPTX</span><span style="font-family:Fira Code,monospace;font-size:0.62rem;color:#b4ff32">python-pptx + Vision</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    st.stop()
 
 # Hero
 st.markdown("""
@@ -584,9 +692,19 @@ if run and uploaded:
             try:    clean,items,count=ai_redact(raw,rules)
             except: clean,items,count=regex_redact(raw,"[REDACTED]" if show_redacted else "████")
 
+    from datetime import datetime
     wc=len(clean.split()); is_clean=count==0
     sc="sb-ok" if is_clean else "sb-wr"
     sv="✓ CLEAN" if is_clean else "⚠ REDACTED"
+
+    # Save to history
+    st.session_state.history.insert(0, {
+        "name": uploaded.name,
+        "words": wc,
+        "redacted": count,
+        "status": "CLEAN" if is_clean else "REDACTED",
+        "time": datetime.now().strftime("%d %b %Y, %I:%M %p")
+    })
 
     st.markdown('<div class="main-wrap">', unsafe_allow_html=True)
     st.markdown('<div class="g-line"></div>', unsafe_allow_html=True)
