@@ -1,6 +1,6 @@
 import streamlit as st
 from groq import Groq
-import json, re, base64, io
+import json, re, io
 
 # ─────────────────────────────────────────
 # PAGE CONFIG
@@ -18,11 +18,11 @@ except:
     st.stop()
 
 # ─────────────────────────────────────────
-# PROFESSIONAL UI (READABILITY FIXED)
+# PROFESSIONAL UI
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Syne:wght@700;800&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
@@ -33,14 +33,12 @@ html, body, [class*="css"] {
     color: #f0f2ff !important;
 }
 
-/* Center content */
 .main .block-container {
     max-width: 950px !important;
     margin: 0 auto !important;
     padding: 0 2rem 4rem !important;
 }
 
-/* HERO */
 .hero {
     text-align: center;
     padding: 3rem 0 2rem;
@@ -63,7 +61,6 @@ html, body, [class*="css"] {
     line-height: 1.7;
 }
 
-/* SECTION HEAD */
 .sec-head {
     font-size: 0.85rem;
     font-weight: 800;
@@ -73,26 +70,6 @@ html, body, [class*="css"] {
     margin: 2.2rem 0 1.2rem;
 }
 
-/* SECURITY CARDS */
-.card {
-    background: #0e0e22;
-    border: 1px solid #1a1a38;
-    border-radius: 18px;
-    padding: 1.2rem;
-    margin-bottom: 1rem;
-}
-.card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-.card-desc {
-    font-size: 0.9rem;
-    color: #8e96d8;
-    line-height: 1.6;
-}
-
-/* BUTTON */
 .stButton > button {
     background: linear-gradient(135deg,#90ff50,#40ffc8) !important;
     color: #050510 !important;
@@ -110,67 +87,106 @@ st.markdown("""
 <div class="hero">
   <div class="hero-title">Doc<span class="g">Vault</span></div>
   <div class="hero-sub">
-    Extract text from any document, scan for threats, and automatically
-    redact sensitive information — securely and instantly.
+    Extract text from any document and automatically redact sensitive information — securely and instantly.
   </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
-# SECURITY SECTION
+# REDACTION OPTIONS
 # ─────────────────────────────────────────
-st.markdown('<div class="sec-head">Security Engine</div>', unsafe_allow_html=True)
+st.markdown('<div class="sec-head">Sensitive Data Protection</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("""
-    <div class="card">
-      <div class="card-title">📦 File Size Validation</div>
-      <div class="card-desc">
-        Prevents oversized files from being processed to protect system performance.
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    redact_ids = st.checkbox("🪪 Aadhaar / SSN / ID", True)
+    redact_phone = st.checkbox("📞 Phone & Email", True)
 
 with col2:
-    st.markdown("""
-    <div class="card">
-      <div class="card-title">🦠 Malware Detection</div>
-      <div class="card-desc">
-        Byte-level scanning to detect malicious executables and embedded exploits.
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    redact_bank = st.checkbox("💳 Banking Information", True)
+    redact_pass = st.checkbox("🔑 Passwords & Secrets", True)
 
 # ─────────────────────────────────────────
-# TOGGLES
-# ─────────────────────────────────────────
-st.markdown('<div class="sec-head">Sensitive Data Protection</div>', unsafe_allow_html=True)
-
-redact_ids = st.checkbox("🪪 Aadhaar / SSN / ID", True)
-redact_phone = st.checkbox("📞 Phone & Email", True)
-redact_bank = st.checkbox("💳 Banking Information", True)
-redact_pass = st.checkbox("🔑 Passwords & Secrets", True)
-
-# ─────────────────────────────────────────
-# FILE UPLOAD (NOW VISIBLE)
+# FILE UPLOAD
 # ─────────────────────────────────────────
 st.markdown('<div class="sec-head">Upload Document</div>', unsafe_allow_html=True)
 
 uploaded = st.file_uploader(
-    "Upload PDF, Word, Excel, PowerPoint or Image",
-    type=["pdf","png","jpg","jpeg","docx","xlsx","pptx","ppt"]
+    "Upload PDF, Word, Excel, PowerPoint or TXT file",
+    type=["pdf","docx","xlsx","pptx","ppt","txt"]
 )
 
 # ─────────────────────────────────────────
-# SIMPLE EXTRACTION (DEMO SAFE VERSION)
+# EXTRACTION FUNCTIONS
 # ─────────────────────────────────────────
-def simple_extract(file):
+def extract_pdf(file_bytes):
     try:
-        return file.read().decode("utf-8", errors="ignore")
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
     except:
-        return "Text extraction completed (binary content processed)."
+        return None
+
+def extract_docx(file_bytes):
+    try:
+        import docx
+        doc = docx.Document(io.BytesIO(file_bytes))
+        return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+    except:
+        return None
+
+def extract_xlsx(file_bytes):
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
+        lines = []
+        for sheet in wb.worksheets:
+            lines.append(f"[Sheet: {sheet.title}]")
+            for row in sheet.iter_rows(values_only=True):
+                row_data = " | ".join(str(cell) for cell in row if cell)
+                if row_data:
+                    lines.append(row_data)
+        return "\n".join(lines)
+    except:
+        return None
+
+def extract_pptx(file_bytes):
+    try:
+        from pptx import Presentation
+        prs = Presentation(io.BytesIO(file_bytes))
+        lines = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text") and shape.text.strip():
+                    lines.append(shape.text.strip())
+        return "\n".join(lines)
+    except:
+        return None
+
+# ─────────────────────────────────────────
+# REDACTION FUNCTION
+# ─────────────────────────────────────────
+def redact_text(text):
+    if redact_phone:
+        text = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+',
+                      "[REDACTED EMAIL]", text)
+        text = re.sub(r'\b(\+91[\s-]?)?[6-9]\d{9}\b',
+                      "[REDACTED PHONE]", text)
+
+    if redact_ids:
+        text = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b',
+                      "[REDACTED ID]", text)
+
+    if redact_bank:
+        text = re.sub(r'\b(?:\d[ -]*?){13,16}\b',
+                      "[REDACTED CARD]", text)
+
+    if redact_pass:
+        text = re.sub(r'(?i)(password\s*[:=]\s*\S+)',
+                      "[REDACTED PASSWORD]", text)
+
+    return text
 
 # ─────────────────────────────────────────
 # PROCESS BUTTON
@@ -180,19 +196,34 @@ if st.button("🔐 Scan · Extract · Redact"):
     if not uploaded:
         st.warning("Please upload a file first.")
     else:
-        with st.spinner("Processing document..."):
-            text = simple_extract(uploaded)
+        file_bytes = uploaded.read()
+        name = uploaded.name.lower()
 
-        # Basic redaction demo
-        if redact_phone:
-            text = re.sub(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+',
-                          "[REDACTED EMAIL]", text)
+        with st.spinner("Extracting document..."):
 
-        if redact_ids:
-            text = re.sub(r'\b\d{4}\s?\d{4}\s?\d{4}\b',
-                          "[REDACTED ID]", text)
+            text = None
 
-        st.success("Processing Complete ✅")
+            if name.endswith(".pdf"):
+                text = extract_pdf(file_bytes)
 
-        st.markdown('<div class="sec-head">Result</div>', unsafe_allow_html=True)
-        st.text_area("Extracted Output", text, height=300)
+            elif name.endswith(".docx"):
+                text = extract_docx(file_bytes)
+
+            elif name.endswith(".xlsx"):
+                text = extract_xlsx(file_bytes)
+
+            elif name.endswith((".pptx",".ppt")):
+                text = extract_pptx(file_bytes)
+
+            elif name.endswith(".txt"):
+                text = file_bytes.decode("utf-8", errors="ignore")
+
+        if not text:
+            st.error("Unable to extract readable text from this file.")
+        else:
+            redacted = redact_text(text)
+
+            st.success("Processing Complete ✅")
+
+            st.markdown('<div class="sec-head">Result</div>', unsafe_allow_html=True)
+            st.text_area("Extracted Output", redacted, height=400)
