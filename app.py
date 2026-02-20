@@ -3,8 +3,8 @@ from groq import Groq
 import json, re, base64, io, hashlib
 
 st.set_page_config(
-    page_title="AI Document Extractor",
-    page_icon="📄",
+    page_title="DocVault · AI Extractor",
+    page_icon="🔐",
     layout="centered"
 )
 
@@ -19,99 +19,427 @@ except Exception:
 # ── Custom CSS ────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] { font-family: 'DM Mono', monospace; }
-.stApp { background: #0a0a0f; color: #e8e8f0; }
+/* ── Reset & Base ── */
+html, body, [class*="css"] {
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
 
+.stApp {
+    background: #050508;
+    color: #f0f0f8;
+    background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(140,255,100,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(100,200,255,0.05) 0%, transparent 50%);
+}
+
+/* ── Hide clutter ── */
 #MainMenu, footer, header, .stDeployButton,
 [data-testid="stToolbar"], [data-testid="stDecoration"],
-[data-testid="stStatusWidget"] { display: none !important; visibility: hidden !important; }
-[data-testid="stSidebar"] { min-width: 250px !important; }
-[data-testid="collapsedControl"] { display: flex !important; visibility: visible !important; }
+[data-testid="stStatusWidget"] { display:none !important; visibility:hidden !important; }
+[data-testid="stSidebar"] { min-width:270px !important; }
+[data-testid="collapsedControl"] { display:flex !important; visibility:visible !important; }
 
-.main-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.6rem; font-weight: 800;
-    background: linear-gradient(135deg, #e8e8f0 30%, #6c63ff 70%, #ff6584 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    text-align: center; margin-bottom: 0.2rem;
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: #0c0c12 !important;
+    border-right: 1px solid #1a1a2e !important;
 }
-.subtitle { text-align: center; color: #6b6b8a; font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 2rem; }
-.badge { display: flex; justify-content: center; margin-bottom: 1rem; }
-.badge span {
-    background: linear-gradient(135deg, #6c63ff, #ff6584);
-    color: white; padding: 0.3rem 1rem; border-radius: 999px;
-    font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+section[data-testid="stSidebar"] * { color: #c0c0d8 !important; }
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] strong { color: #f0f0f8 !important; }
+div[data-testid="stSelectbox"] > div {
+    background: #0a0a12 !important;
+    border: 1px solid #1e1e38 !important;
+    border-radius: 10px !important;
+}
+
+/* ── Hero Header ── */
+.hero-wrap {
+    position: relative;
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+.hero-glow {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 300px; height: 120px;
+    background: radial-gradient(ellipse, rgba(140,255,80,0.18) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+.hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(140,255,80,0.1);
+    border: 1px solid rgba(140,255,80,0.3);
+    color: #a8ff60;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+.hero-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: #a8ff60;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #a8ff60;
+    animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(1.4); }
+}
+.hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.8rem;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: #f0f0f8;
+    margin: 0 0 0.4rem;
+}
+.hero-title span {
+    background: linear-gradient(90deg, #a8ff60, #60ffcc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+    font-size: 0.85rem;
+    color: #5a5a78;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+}
+
+/* ── Security Shield Card ── */
+.shield-intro {
+    background: linear-gradient(135deg, #0e0e1a 0%, #111122 100%);
+    border: 1px solid #1e1e38;
+    border-radius: 20px;
+    padding: 1.4rem 1.6rem;
+    margin: 1rem 0 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.shield-intro::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, #a8ff60, transparent);
+    opacity: 0.6;
+}
+.shield-intro-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a8ff60;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.security-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+}
+.sec-check-card {
+    background: #0a0a14;
+    border: 1px solid #1a1a2e;
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    transition: border-color 0.2s;
+}
+.sec-check-card:hover { border-color: #2a2a4e; }
+.sec-check-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.sec-check-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #d0d0e8;
+    line-height: 1.3;
+}
+.sec-check-desc {
+    font-size: 0.68rem;
+    color: #4a4a68;
+    margin-top: 0.2rem;
+    line-height: 1.4;
+}
+
+/* ── File Uploader ── */
+div[data-testid="stFileUploader"] {
+    background: #0c0c18 !important;
+    border: 2px dashed #1e1e38 !important;
+    border-radius: 18px !important;
+    padding: 1.5rem !important;
+    transition: border-color 0.3s !important;
+}
+div[data-testid="stFileUploader"]:hover {
+    border-color: rgba(168,255,96,0.4) !important;
+}
+div[data-testid="stFileUploader"] label {
+    color: #6060a0 !important;
+    font-size: 0.85rem !important;
+}
+
+/* ── Buttons ── */
+.stButton > button {
+    width: 100%;
+    background: linear-gradient(135deg, #a8ff60 0%, #60ffcc 100%) !important;
+    color: #050508 !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    border: none !important;
+    border-radius: 14px !important;
+    padding: 0.85rem !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    transition: all 0.2s !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 40px rgba(168,255,96,0.25) !important;
+}
+.stButton > button:active { transform: translateY(0) !important; }
+
+/* ── Scan result rows ── */
+.scan-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 1rem;
+    background: #0c0c18;
+    border: 1px solid #1a1a2e;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    font-size: 0.82rem;
+}
+.scan-icon { font-size: 1.1rem; flex-shrink: 0; }
+.scan-label {
+    font-weight: 600;
+    color: #d0d0e8;
+    min-width: 130px;
+    font-size: 0.8rem;
+}
+.scan-msg { color: #6060a0; flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; }
+.dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-left: auto;
+}
+.dot-ok   { background: #a8ff60; box-shadow: 0 0 8px rgba(168,255,96,0.6); }
+.dot-warn { background: #ffd060; box-shadow: 0 0 8px rgba(255,208,96,0.6); }
+.dot-err  { background: #ff5080; box-shadow: 0 0 8px rgba(255,80,128,0.6); }
+
+/* ── Alert boxes ── */
+.alert {
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+    font-size: 0.83rem;
+    line-height: 1.6;
+}
+.alert-danger { background: rgba(255,50,80,0.08); border: 1px solid rgba(255,50,80,0.3); color: #ff7090; }
+.alert-ok     { background: rgba(168,255,96,0.07); border: 1px solid rgba(168,255,96,0.25); color: #a8ff60; }
+.alert-warn   { background: rgba(255,208,96,0.07); border: 1px solid rgba(255,208,96,0.25); color: #ffd060; }
+.alert-info   { background: rgba(96,200,255,0.07); border: 1px solid rgba(96,200,255,0.25); color: #60c8ff; }
+
+/* ── Stats row ── */
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin: 1rem 0;
+}
+.stat-card {
+    background: #0c0c18;
+    border: 1px solid #1a1a2e;
+    border-radius: 16px;
+    padding: 1.1rem 0.8rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, #a8ff60, #60ffcc);
+    opacity: 0.5;
+}
+.stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.04em;
+    color: #a8ff60;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+.stat-lbl {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3a3a58;
+}
+
+/* ── Result box ── */
+.result-wrap { margin-top: 1rem; }
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+.result-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4a4a78;
 }
 .result-box {
-    background: #12121a; border: 1px solid #2a2a3d; border-radius: 14px;
-    padding: 1.4rem; margin-top: 1rem; font-size: 0.88rem;
-    line-height: 1.8; color: #e8e8f0; white-space: pre-wrap; word-break: break-word;
+    background: #0c0c18;
+    border: 1px solid #1a1a2e;
+    border-radius: 16px;
+    padding: 1.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.9;
+    color: #c0c0d8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 420px;
+    overflow-y: auto;
     position: relative;
 }
 .result-box::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, #6c63ff, transparent);
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(168,255,96,0.4), transparent);
 }
-.stat-card {
-    background: #12121a; border: 1px solid #2a2a3d; border-radius: 12px;
-    padding: 1rem; text-align: center;
-}
-.stat-num { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: #6c63ff; }
-.stat-label { font-size: 0.72rem; color: #6b6b8a; letter-spacing: 0.05em; }
-.tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.72rem; margin: 0.15rem; }
-.tag-redacted { background: rgba(255,101,132,0.15); border: 1px solid rgba(255,101,132,0.4); color: #ff8fa3; }
-.tag-clean    { background: rgba(67,233,123,0.12);  border: 1px solid rgba(67,233,123,0.35); color: #43e97b; }
+.result-box::-webkit-scrollbar { width: 4px; }
+.result-box::-webkit-scrollbar-track { background: transparent; }
+.result-box::-webkit-scrollbar-thumb { background: #2a2a48; border-radius: 4px; }
 
-div[data-testid="stFileUploader"] {
-    background: #12121a !important; border: 2px dashed #2a2a3d !important;
-    border-radius: 14px !important; padding: 1rem !important;
+/* ── Redaction tags ── */
+.tags-row { margin: 0.6rem 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.rtag {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.68rem; font-weight: 600;
+    background: rgba(255,80,128,0.1);
+    border: 1px solid rgba(255,80,128,0.3);
+    color: #ff80a8;
 }
-div[data-testid="stFileUploader"]:hover { border-color: #6c63ff !important; }
 
-.stButton > button {
-    width: 100%; background: linear-gradient(135deg, #6c63ff, #9b59f7) !important;
-    color: white !important; font-family: 'Syne', sans-serif !important;
-    font-weight: 700 !important; font-size: 1rem !important;
-    border: none !important; border-radius: 12px !important; padding: 0.75rem !important;
+/* ── Section headings ── */
+.section-head {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #4a4a78;
+    margin: 1.5rem 0 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
-.stButton > button:hover { box-shadow: 0 8px 30px rgba(108,99,255,0.4) !important; }
-
-section[data-testid="stSidebar"] { background: #12121a !important; border-right: 1px solid #2a2a3d; }
-div[data-testid="stSelectbox"] > div { background: #0a0a0f !important; border: 1px solid #2a2a3d !important; color: #e8e8f0 !important; border-radius: 8px !important; }
-
-/* Security alert boxes */
-.sec-block {
-    border-radius: 12px; padding: 1rem 1.2rem; margin: 0.5rem 0;
-    font-size: 0.82rem; line-height: 1.6;
+.section-head::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #1a1a30, transparent);
 }
-.sec-danger  { background: rgba(255,59,59,0.08);  border: 1px solid rgba(255,59,59,0.35);  color: #ff7070; }
-.sec-warn    { background: rgba(255,180,0,0.08);   border: 1px solid rgba(255,180,0,0.35);   color: #ffc94d; }
-.sec-info    { background: rgba(108,99,255,0.08);  border: 1px solid rgba(108,99,255,0.35);  color: #a09aff; }
-.sec-ok      { background: rgba(67,233,123,0.07);  border: 1px solid rgba(67,233,123,0.3);   color: #43e97b; }
 
-.shield-row {
-    display: flex; align-items: center; gap: 0.6rem;
-    background: #12121a; border: 1px solid #1e1e2e;
-    border-radius: 10px; padding: 0.6rem 1rem;
-    font-size: 0.78rem; color: #6b6b8a; margin-bottom: 0.4rem;
+/* ── Divider ── */
+hr { border-color: #1a1a30 !important; }
+
+/* ── File info pill ── */
+.file-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #0c0c18;
+    border: 1px solid #1e1e38;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    color: #8080c0;
+    margin: 0.5rem 0;
+    font-family: 'JetBrains Mono', monospace;
 }
-.shield-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-ok    { background: #43e97b; box-shadow: 0 0 6px rgba(67,233,123,0.5); }
-.dot-warn  { background: #ffc94d; box-shadow: 0 0 6px rgba(255,180,0,0.5); }
-.dot-err   { background: #ff6584; box-shadow: 0 0 6px rgba(255,101,132,0.5); }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────
-st.markdown('<div class="badge"><span>📄 AI Document Extractor · Smart Redaction</span></div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">AI Document Extractor</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Extract text from any document or image · Sensitive data auto-redacted.</div>', unsafe_allow_html=True)
+# ── HERO ──────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="hero-wrap">
+    <div class="hero-glow"></div>
+    <div class="hero-pill">🔐 Secure · AI-Powered · Private</div>
+    <div class="hero-title">Doc<span>Vault</span></div>
+    <div class="hero-sub">Extract · Scan · Redact · Download — all in one secure pipeline</div>
+</div>
+""", unsafe_allow_html=True)
 
-# ── Sidebar ───────────────────────────────────────────────────────────
+# ── SECURITY FEATURES INTRO ───────────────────────────────────────────
+st.markdown("""
+<div class="shield-intro">
+    <div class="shield-intro-title">🛡️ 4-Layer Security Engine — Active</div>
+    <div class="security-grid">
+        <div class="sec-check-card">
+            <div class="sec-check-icon">📦</div>
+            <div>
+                <div class="sec-check-label">File Size Limit</div>
+                <div class="sec-check-desc">Rejects oversized files before processing begins</div>
+            </div>
+        </div>
+        <div class="sec-check-card">
+            <div class="sec-check-icon">🦠</div>
+            <div>
+                <div class="sec-check-label">Virus / Malware Scan</div>
+                <div class="sec-check-desc">Byte-level signature scan for known exploits & malicious patterns</div>
+            </div>
+        </div>
+        <div class="sec-check-card">
+            <div class="sec-check-icon">🧩</div>
+            <div>
+                <div class="sec-check-label">Corrupted File Detection</div>
+                <div class="sec-check-desc">Files that can't be opened are rejected immediately</div>
+            </div>
+        </div>
+        <div class="sec-check-card">
+            <div class="sec-check-icon">🔍</div>
+            <div>
+                <div class="sec-check-label">File Type Verification</div>
+                <div class="sec-check-desc">Magic-byte check — catches renamed or disguised files</div>
+            </div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── SIDEBAR ───────────────────────────────────────────────────────────
 st.sidebar.markdown("## ⚙️ Settings")
-st.sidebar.markdown("**Redact sensitive data:**")
+st.sidebar.markdown("**🔒 Redact sensitive data:**")
 redact_ids       = st.sidebar.checkbox("🪪 ID / Aadhaar / SSN numbers",  value=True)
 redact_phones    = st.sidebar.checkbox("📞 Phone numbers & emails",       value=True)
 redact_banking   = st.sidebar.checkbox("💳 Bank / credit card numbers",   value=True)
@@ -123,88 +451,79 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**🛡️ Security Limits:**")
 max_size_mb = st.sidebar.slider("Max file size (MB)", 1, 20, 10)
 st.sidebar.markdown("---")
-st.sidebar.markdown("<small style='color:#6b6b8a'>AI Document Extractor · v2.0</small>", unsafe_allow_html=True)
+st.sidebar.markdown("<small style='color:#3a3a58'>DocVault · AI Extractor · v3.0</small>", unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════
 # SECURITY ENGINE
 # ════════════════════════════════════════════════════════════════════
 
-# Known malware/exploit signatures (magic bytes + patterns)
 MALWARE_SIGNATURES = [
-    # Executable embedded in PDF/Office
-    b"TVqQAAMAAAAEAAAA",          # MZ header base64 (PE executable)
-    b"\x4d\x5a\x90\x00",         # MZ header (Windows PE)
-    b"\x7fELF",                   # ELF Linux executable
-    # Malicious PDF patterns
+    b"TVqQAAMAAAAEAAAA",
+    b"\x4d\x5a\x90\x00",
+    b"\x7fELF",
     b"/JavaScript",
     b"/JS ",
     b"eval(",
     b"unescape(",
     b"/OpenAction",
-    b"/AA ",                       # Auto-action PDF
-    b"/Launch",                    # PDF Launch action
+    b"/AA ",
+    b"/Launch",
     b"cmd.exe",
     b"powershell",
     b"WScript",
     b"ActiveXObject",
-    # Macro patterns in Office docs
     b"AutoOpen",
     b"Auto_Open",
     b"AutoExec",
     b"Shell(",
     b"CreateObject(",
     b"WScript.Shell",
-    b"AAAA" * 20,                  # NOP sled pattern
+    b"AAAA" * 20,
 ]
 
-# Real magic bytes per file type
 MAGIC_BYTES = {
     "pdf":  [(0, b"%PDF")],
     "png":  [(0, b"\x89PNG\r\n\x1a\n")],
     "jpg":  [(0, b"\xff\xd8\xff")],
     "jpeg": [(0, b"\xff\xd8\xff")],
-    "docx": [(0, b"PK\x03\x04")],   # ZIP-based
+    "docx": [(0, b"PK\x03\x04")],
     "xlsx": [(0, b"PK\x03\x04")],
     "pptx": [(0, b"PK\x03\x04")],
-    "ppt":  [(0, b"\xd0\xcf\x11\xe0")],  # OLE2
+    "ppt":  [(0, b"\xd0\xcf\x11\xe0")],
 }
 
 def check_file_size(fb, max_mb):
     size_mb = len(fb) / (1024 * 1024)
     if size_mb > max_mb:
-        return False, f"File is {size_mb:.1f} MB — exceeds the {max_mb} MB limit. Please upload a smaller file."
-    return True, f"Size OK ({size_mb:.1f} MB)"
+        return False, f"File is {size_mb:.1f} MB — exceeds {max_mb} MB limit"
+    return True, f"Size OK · {size_mb:.1f} MB"
 
 def check_magic_bytes(fb, ext):
-    """Verify actual file content matches claimed extension."""
     ext = ext.lower().lstrip(".")
     if ext not in MAGIC_BYTES:
         return True, "Format check skipped (unknown type)"
     for offset, magic in MAGIC_BYTES[ext]:
-        chunk = fb[offset:offset+len(magic)]
-        if chunk == magic:
-            return True, f"File signature valid ({ext.upper()})"
-    return False, f"⚠️ File content does not match .{ext} format — possible renamed or fake file."
+        if fb[offset:offset+len(magic)] == magic:
+            return True, f"Signature valid · {ext.upper()} confirmed"
+    return False, f"Content mismatch for .{ext} — possible disguised file"
 
 def check_virus_signatures(fb):
-    """Scan raw bytes for known malware signatures."""
     hits = []
     for sig in MALWARE_SIGNATURES:
         if sig in fb:
             label = sig.decode("utf-8", errors="replace").strip()[:40]
             hits.append(label)
     if hits:
-        return False, f"Suspicious pattern detected: {', '.join(set(hits[:3]))}"
-    return True, "No known malware signatures found"
+        return False, f"Suspicious pattern: {', '.join(set(hits[:3]))}"
+    return True, "No malware signatures detected"
 
 def check_corruption(fb, ext):
-    """Try actually opening the file to catch corruption."""
     ext = ext.lower().lstrip(".")
     try:
         if ext == "pdf":
             import pypdf
             r = pypdf.PdfReader(io.BytesIO(fb))
-            _ = len(r.pages)  # force parse
+            _ = len(r.pages)
         elif ext == "docx":
             import docx
             docx.Document(io.BytesIO(fb))
@@ -214,51 +533,35 @@ def check_corruption(fb, ext):
         elif ext in ("pptx", "ppt"):
             from pptx import Presentation
             Presentation(io.BytesIO(fb))
-        elif ext in ("jpg", "jpeg", "png"):
-            # Check image header integrity
-            if ext == "png" and not fb.endswith(b"\x49\x45\x4e\x44\xae\x42\x60\x82"):
-                pass  # PNG IEND check (soft warning only)
-        return True, "File opened successfully — not corrupted"
+        return True, "File opened successfully · Not corrupted"
     except Exception as e:
-        return False, f"File appears corrupted and cannot be opened: {str(e)[:120]}"
+        return False, f"Cannot open file: {str(e)[:100]}"
 
 def run_security_scan(fb, filename, max_mb):
-    """Run all 4 checks. Returns (passed, results_list)."""
     ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
     results = []
     all_passed = True
-
-    # 1. File size
-    ok, msg = check_file_size(fb, max_mb)
-    results.append(("📦 File Size",      ok, msg))
-    if not ok: all_passed = False
-
-    # 2. Magic bytes / type verification
-    ok, msg = check_magic_bytes(fb, ext)
-    results.append(("🔍 File Type",      ok, msg))
-    if not ok: all_passed = False
-
-    # 3. Virus / malware signatures
-    ok, msg = check_virus_signatures(fb)
-    results.append(("🦠 Virus Scan",     ok, msg))
-    if not ok: all_passed = False
-
-    # 4. Corruption check
-    ok, msg = check_corruption(fb, ext)
-    results.append(("🧩 Integrity",      ok, msg))
-    if not ok: all_passed = False
-
+    checks = [
+        ("📦 File Size",    check_file_size(fb, max_mb)),
+        ("🔍 File Type",    check_magic_bytes(fb, ext)),
+        ("🦠 Virus Scan",   check_virus_signatures(fb)),
+        ("🧩 Integrity",    check_corruption(fb, ext)),
+    ]
+    for label, (ok, msg) in checks:
+        results.append((label, ok, msg))
+        if not ok:
+            all_passed = False
     return all_passed, results
 
 # ── Redaction helpers ─────────────────────────────────────────────────
 def build_redaction_prompt():
     rules = []
-    if redact_ids:       rules.append("Aadhaar numbers (12-digit, may be spaced as XXXX XXXX XXXX), SSN, PAN card numbers (format: ABCDE1234F), passport numbers, driving license numbers, voter ID, any government ID number")
-    if redact_phones:    rules.append("phone numbers, mobile numbers (+91 or 10-digit), email addresses, contact numbers")
-    if redact_banking:   rules.append("bank account numbers, IFSC codes, credit card numbers, debit card numbers, CVV, UPI IDs, MICR codes")
+    if redact_ids:       rules.append("Aadhaar numbers (12-digit), SSN, PAN card numbers (ABCDE1234F), passport, driving license, voter ID, any government ID")
+    if redact_phones:    rules.append("phone numbers, mobile numbers (+91 or 10-digit), email addresses")
+    if redact_banking:   rules.append("bank account numbers, IFSC codes, credit card/debit card numbers, CVV, UPI IDs, MICR codes")
     if redact_passwords: rules.append("passwords, API keys, secret keys, tokens, OTPs, PINs")
-    if redact_names:     rules.append("full names of any person — including names on Aadhaar cards, identity documents, official documents")
-    if redact_dates:     rules.append("dates of birth in ANY format (DD/MM/YYYY, YYYY-MM-DD, written like '15 August 1990'), DOB, Year of Birth, जन्म तिथि")
+    if redact_names:     rules.append("full names of any person on identity documents")
+    if redact_dates:     rules.append("dates of birth in any format, DOB, Year of Birth, जन्म तिथि")
     return rules
 
 def extract_from_pdf(file_bytes):
@@ -307,16 +610,16 @@ def extract_from_image(file_bytes, mime_type):
         model="meta-llama/llama-4-scout-17b-16e-instruct",
         messages=[{"role": "user", "content": [
             {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{b64}"}},
-            {"type": "text", "text": """Analyze this image carefully:
-1. Extract ALL visible text exactly as it appears (signs, labels, documents, watermarks, URLs, etc.)
-2. If there is little or no text, describe what you see in detail (people, objects, setting, colors, actions)
+            {"type": "text", "text": """Analyze this image:
+1. Extract ALL visible text exactly as it appears
+2. If little/no text, describe in detail
 
-Format your response as:
+Format:
 TEXT FOUND:
-[any text you can read, or 'No readable text found']
+[text or 'No readable text found']
 
 IMAGE DESCRIPTION:
-[detailed description of what is in the image]"""}
+[detailed description]"""}
         ]}],
         max_tokens=2000
     )
@@ -358,9 +661,6 @@ REDACT THESE CATEGORIES:
 
 RULES:
 - Replace ONLY the sensitive value with "{placeholder}", preserve all surrounding text
-- Names appear after "Name:", "नाम:" — REDACT the name value
-- DOB appears after "DOB:", "Date of Birth:", "जन्म तिथि:" — REDACT the date
-- Aadhaar is 12 digits (may be spaced XXXX XXXX XXXX) — REDACT it
 - When uncertain — REDACT it
 
 Return ONLY valid JSON:
@@ -380,16 +680,18 @@ TEXT:
     raw     = response.choices[0].message.content.strip()
     cleaned = re.sub(r'```json|```', '', raw).strip()
     try:
-        result     = json.loads(cleaned)
-        clean      = result.get("clean_text", text)
-        items      = result.get("redacted_items", [])
-        count      = result.get("redaction_count", 0)
+        result    = json.loads(cleaned)
+        clean     = result.get("clean_text", text)
+        items     = result.get("redacted_items", [])
+        count     = result.get("redaction_count", 0)
         clean, extra_items, extra_count = regex_redact(clean, placeholder)
         return clean, items + extra_items, count + extra_count
     except:
         return regex_redact(text, placeholder)
 
-# ── Upload ────────────────────────────────────────────────────────────
+# ── UPLOAD ────────────────────────────────────────────────────────────
+st.markdown('<div class="section-head">📎 Upload Document</div>', unsafe_allow_html=True)
+
 uploaded = st.file_uploader(
     "Upload a document or image",
     type=["pdf", "png", "jpg", "jpeg", "docx", "xlsx", "pptx", "ppt"],
@@ -397,13 +699,17 @@ uploaded = st.file_uploader(
 )
 
 if uploaded:
-    st.markdown(f"**📎 {uploaded.name}** · `{uploaded.type}` · `{uploaded.size/1024:.1f} KB`")
+    st.markdown(
+        f'<div class="file-pill">📄 {uploaded.name} &nbsp;·&nbsp; {uploaded.type} &nbsp;·&nbsp; {uploaded.size/1024:.1f} KB</div>',
+        unsafe_allow_html=True
+    )
 
-run = st.button("🔍 Extract & Redact", use_container_width=True)
+st.markdown("<br>", unsafe_allow_html=True)
+run = st.button("🔐 Scan · Extract · Redact", use_container_width=True)
 
-# ── Process ───────────────────────────────────────────────────────────
+# ── PROCESS ───────────────────────────────────────────────────────────
 if run and not uploaded:
-    st.error("Please upload a file first.")
+    st.markdown('<div class="alert alert-warn">⚠️ Please upload a file first.</div>', unsafe_allow_html=True)
     st.stop()
 
 if run and uploaded:
@@ -411,56 +717,50 @@ if run and uploaded:
     mime       = uploaded.type
     name       = uploaded.name.lower()
 
-    # ════════════════════════════════════════════
-    # STEP 1: SECURITY SCAN
-    # ════════════════════════════════════════════
-    st.markdown("---")
-    st.markdown("### 🛡️ Security Scan")
+    # ── STEP 1: SECURITY SCAN ──
+    st.markdown('<div class="section-head">🛡️ Security Scan</div>', unsafe_allow_html=True)
 
-    with st.spinner("🔍 Running security checks..."):
+    with st.spinner("Running 4-layer security checks..."):
         passed, scan_results = run_security_scan(file_bytes, name, max_size_mb)
 
-    # Display scan results
     for check_name, ok, msg in scan_results:
-        dot = "dot-ok" if ok else "dot-err"
-        icon = "✅" if ok else "❌"
+        dot_cls  = "dot-ok" if ok else "dot-err"
+        icon     = "✅" if ok else "❌"
         st.markdown(
-            f'<div class="shield-row">'
-            f'<span class="shield-dot {dot}"></span>'
-            f'<strong style="color:#e8e8f0;min-width:120px">{check_name}</strong>'
-            f'<span>{icon} {msg}</span>'
+            f'<div class="scan-row">'
+            f'<span class="scan-icon">{check_name.split()[0]}</span>'
+            f'<span class="scan-label">{" ".join(check_name.split()[1:])}</span>'
+            f'<span class="scan-msg">{icon}&nbsp; {msg}</span>'
+            f'<span class="dot {dot_cls}"></span>'
             f'</div>',
             unsafe_allow_html=True
         )
 
     if not passed:
         st.markdown("""
-        <div class="sec-block sec-danger">
+        <div class="alert alert-danger">
             🚫 <strong>File rejected.</strong> One or more security checks failed.<br>
-            Please upload a clean, valid file. Do not attempt to upload corrupted,
-            renamed, or potentially malicious files.
+            Please upload a clean, valid, non-corrupted file.
         </div>
         """, unsafe_allow_html=True)
         st.stop()
 
     st.markdown("""
-    <div class="sec-block sec-ok">
-        ✅ <strong>All security checks passed.</strong> Proceeding with extraction.
+    <div class="alert alert-ok">
+        ✅ <strong>All 4 security checks passed.</strong> Proceeding to extraction.
     </div>
     """, unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════
-    # STEP 2: EXTRACT TEXT
-    # ════════════════════════════════════════════
-    st.markdown("---")
+    # ── STEP 2: EXTRACT TEXT ──
+    st.markdown('<div class="section-head">📖 Text Extraction</div>', unsafe_allow_html=True)
     raw_text = None
 
-    with st.spinner("📖 Extracting text from document..."):
+    with st.spinner("Extracting text from document..."):
         try:
             if name.endswith(".pdf"):
                 raw_text = extract_from_pdf(file_bytes)
                 if not raw_text:
-                    st.info("Text extraction from PDF failed — using AI Vision OCR...")
+                    st.markdown('<div class="alert alert-info">ℹ️ Native PDF extraction failed — switching to AI Vision OCR...</div>', unsafe_allow_html=True)
                     raw_text = extract_from_image(file_bytes, "application/pdf")
             elif name.endswith((".png", ".jpg", ".jpeg")):
                 raw_text = extract_from_image(file_bytes, mime)
@@ -473,59 +773,73 @@ if run and uploaded:
                 if not raw_text:
                     raw_text = extract_from_image(file_bytes, mime)
         except Exception as e:
-            st.error(f"Extraction error: {e}")
+            st.markdown(f'<div class="alert alert-danger">❌ Extraction error: {e}</div>', unsafe_allow_html=True)
             raw_text = None
 
     if not raw_text or len(raw_text.strip()) < 5:
         st.markdown("""
-        <div class="sec-block sec-warn">
-            ⚠️ <strong>No text could be extracted from this file.</strong><br>
-            The file passed security checks but contains no readable text.
-            It may be a scanned image with no OCR content, or an empty document.
+        <div class="alert alert-warn">
+            ⚠️ <strong>No text could be extracted.</strong><br>
+            The file passed security checks but contains no readable content.
+            It may be a blank document or a pure image with no OCR data.
         </div>
         """, unsafe_allow_html=True)
         st.stop()
 
-    # ════════════════════════════════════════════
-    # STEP 3: REDACT
-    # ════════════════════════════════════════════
+    # ── STEP 3: REDACT ──
+    st.markdown('<div class="section-head">🔒 Privacy Redaction</div>', unsafe_allow_html=True)
     rules      = build_redaction_prompt()
     clean_text = raw_text
     items      = []
     count      = 0
 
     if rules:
-        with st.spinner("🔒 Scanning and redacting sensitive information..."):
+        with st.spinner("AI scanning for sensitive data..."):
             try:
                 clean_text, items, count = redact_sensitive(raw_text, rules)
             except Exception as e:
-                st.warning(f"AI redaction failed, using regex fallback: {e}")
+                st.markdown(f'<div class="alert alert-warn">⚠️ AI redaction failed, using regex fallback: {e}</div>', unsafe_allow_html=True)
                 clean_text, items, count = regex_redact(raw_text)
     else:
-        st.info("ℹ️ No redaction rules selected — showing full extracted text.")
+        st.markdown('<div class="alert alert-info">ℹ️ No redaction rules selected — displaying full extracted text.</div>', unsafe_allow_html=True)
 
-    # ════════════════════════════════════════════
-    # STEP 4: RESULTS
-    # ════════════════════════════════════════════
+    # ── STEP 4: RESULTS ──
+    st.markdown('<div class="section-head">📊 Results</div>', unsafe_allow_html=True)
+
     word_count = len(clean_text.split())
     char_count = len(clean_text)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f'<div class="stat-card"><div class="stat-num">{word_count:,}</div><div class="stat-label">WORDS EXTRACTED</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="stat-card"><div class="stat-num">{count}</div><div class="stat-label">ITEMS REDACTED</div></div>', unsafe_allow_html=True)
-    with c3:
-        status = "✅ CLEAN" if count == 0 else "🔒 REDACTED"
-        color  = "#43e97b" if count == 0 else "#ff8fa3"
-        st.markdown(f'<div class="stat-card"><div class="stat-num" style="color:{color};font-size:1.1rem;padding-top:.4rem">{status}</div><div class="stat-label">DOCUMENT STATUS</div></div>', unsafe_allow_html=True)
+    status     = "CLEAN" if count == 0 else "REDACTED"
+    status_col = "#a8ff60" if count == 0 else "#ff80a8"
+
+    st.markdown(f"""
+    <div class="stat-row">
+        <div class="stat-card">
+            <div class="stat-num">{word_count:,}</div>
+            <div class="stat-lbl">Words Extracted</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{count}</div>
+            <div class="stat-lbl">Items Redacted</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" style="color:{status_col};font-size:1.3rem;padding-top:0.3rem">{status}</div>
+            <div class="stat-lbl">Document Status</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if items:
-        st.markdown("<br>**🔒 Redacted categories:**", unsafe_allow_html=True)
-        tags = "".join(f'<span class="tag tag-redacted">🚫 {i}</span>' for i in set(items))
-        st.markdown(f'<div style="margin:.5rem 0">{tags}</div>', unsafe_allow_html=True)
+        tags = "".join(f'<span class="rtag">🚫 {i}</span>' for i in set(items))
+        st.markdown(f'<div class="tags-row">{tags}</div>', unsafe_allow_html=True)
 
-    st.markdown("<br>**📝 Extracted Text:**", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="result-wrap">
+        <div class="result-header">
+            <span class="result-label">📝 Extracted Text</span>
+        </div>
+    """, unsafe_allow_html=True)
     st.markdown(f'<div class="result-box">{clean_text}</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_a, col_b = st.columns(2)
