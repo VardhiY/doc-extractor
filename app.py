@@ -9,16 +9,24 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────
-# PREMIUM FULLSCREEN UI (UNCHANGED)
+# PREMIUM FULLSCREEN UI
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+}
 
 .stApp {
     background: radial-gradient(circle at 20% 20%, #111133, #070714 60%);
     color: #f1f3ff;
+}
+
+.main .block-container {
+    padding: 2rem 4rem 4rem 4rem !important;
+    max-width: 100% !important;
 }
 
 .section-title {
@@ -29,6 +37,17 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     text-transform: uppercase;
     color: #7f88ff;
 }
+
+.card {
+    background: #0f1024;
+    border: 1px solid #1c1d45;
+    border-radius: 18px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.pass { color:#90ff50; font-weight:600; }
+.fail { color:#ff5f7a; font-weight:600; }
 
 textarea {
     background:#0b0c20 !important;
@@ -42,28 +61,76 @@ textarea {
 st.title("🔐 DocVault Enterprise")
 
 # ─────────────────────────────────────────
-# 🔴 REDACTION CONTROLS (NEW SECTION)
+# 🔒 SECURITY DASHBOARD
+# ─────────────────────────────────────────
+st.markdown('<div class="section-title">Security Engine</div>', unsafe_allow_html=True)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("""
+    <div class="card">
+    <div class="pass">✔ File Type Verification</div>
+    Validates magic bytes to prevent disguised malicious files.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+    <div class="pass">✔ Malware Signature Scan</div>
+    Detects suspicious executable and embedded script patterns.
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown("""
+    <div class="card">
+    <div class="pass">✔ Corruption Detection</div>
+    Attempts structured parsing before extraction.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card">
+    <div class="fail">✖ Executable Files Blocked</div>
+    .exe, .bat, .js and renamed scripts are automatically rejected.
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────
+# 🔴 REDACTION CONTROLS
 # ─────────────────────────────────────────
 st.markdown('<div class="section-title">Redaction Controls</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-with col1:
+with c1:
     redact_aadhaar = st.checkbox("Aadhaar Number")
     redact_pan = st.checkbox("PAN Number")
     redact_ssn = st.checkbox("SSN")
 
-with col2:
+with c2:
     redact_mobile = st.checkbox("Mobile Numbers")
     redact_dob = st.checkbox("Date of Birth")
 
-with col3:
+with c3:
     redact_names = st.checkbox("Personal Names")
 
 # ─────────────────────────────────────────
-# SECURITY LOGIC (UNCHANGED)
+# 📂 UPLOAD SECTION
+# ─────────────────────────────────────────
+st.markdown('<div class="section-title">Upload Document</div>', unsafe_allow_html=True)
+
+uploaded = st.file_uploader(
+    "Supported: PDF, DOCX, XLSX, PPTX, PPT, TXT",
+    type=["pdf","docx","xlsx","pptx","ppt","txt"]
+)
+
+# ─────────────────────────────────────────
+# 🔒 SECURITY LOGIC (UNCHANGED)
 # ─────────────────────────────────────────
 MALWARE_SIGS = [b"cmd.exe", b"powershell", b"eval(", b"WScript"]
+
 MAGIC_BYTES = {
     "pdf": b"%PDF",
     "docx": b"PK",
@@ -83,19 +150,23 @@ def check_malware(file_bytes):
 def check_integrity(file_bytes, ext):
     try:
         if ext == "pdf":
-            import pypdf; pypdf.PdfReader(io.BytesIO(file_bytes))
+            import pypdf
+            pypdf.PdfReader(io.BytesIO(file_bytes))
         elif ext == "docx":
-            import docx; docx.Document(io.BytesIO(file_bytes))
+            import docx
+            docx.Document(io.BytesIO(file_bytes))
         elif ext == "xlsx":
-            import openpyxl; openpyxl.load_workbook(io.BytesIO(file_bytes))
+            import openpyxl
+            openpyxl.load_workbook(io.BytesIO(file_bytes))
         elif ext in ["pptx","ppt"]:
-            from pptx import Presentation; Presentation(io.BytesIO(file_bytes))
+            from pptx import Presentation
+            Presentation(io.BytesIO(file_bytes))
         return True
     except:
         return False
 
 # ─────────────────────────────────────────
-# EXTRACTION (UNCHANGED)
+# 📄 EXTRACTION (UNCHANGED)
 # ─────────────────────────────────────────
 def extract_text(file_bytes, ext):
     if ext == "pdf":
@@ -115,7 +186,8 @@ def extract_text(file_bytes, ext):
         for sheet in wb.worksheets:
             for row in sheet.iter_rows(values_only=True):
                 line=" | ".join(str(c) for c in row if c)
-                if line: text.append(line)
+                if line:
+                    text.append(line)
         return "\n".join(text)
 
     if ext in ["pptx","ppt"]:
@@ -134,7 +206,7 @@ def extract_text(file_bytes, ext):
     return None
 
 # ─────────────────────────────────────────
-# 🔴 REDACTION FUNCTION (NEW)
+# 🔴 REDACTION FUNCTION
 # ─────────────────────────────────────────
 def redact_sensitive(text):
     count = 0
@@ -166,13 +238,8 @@ def redact_sensitive(text):
     return text, count
 
 # ─────────────────────────────────────────
-# PROCESS
+# 🚀 PROCESS
 # ─────────────────────────────────────────
-uploaded = st.file_uploader(
-    "Supported: PDF, DOCX, XLSX, PPTX, PPT, TXT",
-    type=["pdf","docx","xlsx","pptx","ppt","txt"]
-)
-
 if st.button("🔐 Secure Extract"):
 
     if not uploaded:
@@ -203,7 +270,7 @@ if st.button("🔐 Secure Extract"):
             st.warning("No readable text found.")
             st.stop()
 
-        # 🔴 APPLY REDACTION
+        # APPLY REDACTION
         redacted_text, redaction_count = redact_sensitive(text)
 
         st.markdown("## 📄 Extracted Output")
