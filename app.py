@@ -9,24 +9,16 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────
-# UI STYLING (UNCHANGED)
+# PREMIUM FULLSCREEN UI (UNCHANGED)
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif !important;
-}
+html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
 .stApp {
     background: radial-gradient(circle at 20% 20%, #111133, #070714 60%);
     color: #f1f3ff;
-}
-
-.main .block-container {
-    padding: 2rem 4rem 4rem 4rem !important;
-    max-width: 100% !important;
 }
 
 .section-title {
@@ -43,7 +35,6 @@ textarea {
     border:1px solid #20225a !important;
     color:#e0e3ff !important;
     border-radius:12px !important;
-    font-size:0.95rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -51,7 +42,7 @@ textarea {
 st.title("🔐 DocVault Enterprise")
 
 # ─────────────────────────────────────────
-# REDACTION CHECKBOXES
+# 🔴 REDACTION CONTROLS (NEW SECTION)
 # ─────────────────────────────────────────
 st.markdown('<div class="section-title">Redaction Controls</div>', unsafe_allow_html=True)
 
@@ -143,7 +134,7 @@ def extract_text(file_bytes, ext):
     return None
 
 # ─────────────────────────────────────────
-# REDACTION FUNCTION
+# 🔴 REDACTION FUNCTION (NEW)
 # ─────────────────────────────────────────
 def redact_sensitive(text):
     count = 0
@@ -175,7 +166,7 @@ def redact_sensitive(text):
     return text, count
 
 # ─────────────────────────────────────────
-# UPLOAD + PROCESS
+# PROCESS
 # ─────────────────────────────────────────
 uploaded = st.file_uploader(
     "Supported: PDF, DOCX, XLSX, PPTX, PPT, TXT",
@@ -212,9 +203,12 @@ if st.button("🔐 Secure Extract"):
             st.warning("No readable text found.")
             st.stop()
 
+        # 🔴 APPLY REDACTION
         redacted_text, redaction_count = redact_sensitive(text)
 
-        st.markdown("## 📄 Extracted & Redacted Output")
-        st.success(f"🔒 {redaction_count} sensitive items redacted.")
+        st.markdown("## 📄 Extracted Output")
+
+        if redaction_count > 0:
+            st.success(f"🔒 {redaction_count} sensitive items redacted.")
 
         st.text_area("", redacted_text, height=500)
