@@ -4,6 +4,18 @@ import re
 import os
 import base64
 
+# ── GROQ CLIENT FOR IMAGE OCR ──
+api_key = os.environ.get("GROQ_API_KEY")
+if not api_key:
+    try:
+        api_key = st.secrets.get("GROQ_API_KEY")
+    except:
+        pass
+groq_client = None
+if api_key:
+    from groq import Groq
+    groq_client = Groq(api_key=api_key)
+
 st.set_page_config(page_title="DocVault Enterprise", page_icon="🔐", layout="wide")
 
 st.markdown("""
@@ -89,38 +101,49 @@ def check_integrity(fb, ext):
         return False
 
 def ocr_image(fb):
-    from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    """Use Groq Vision for accurate fast OCR. Falls back to tesseract if no API key."""
+    from PIL import Image
+
+    # ── Groq Vision (fast + accurate) ──
+    if groq_client:
+        try:
+            img = Image.open(io.BytesIO(fb)).convert("RGB")
+            # Resize to max 1200px for faster API response
+            w, h = img.size
+            if max(w, h) > 1200:
+                scale = 1200 / max(w, h)
+                img = img.resize((int(w*scale), int(h*scale)), Image.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=85)
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            resp = groq_client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
+                        {"type": "text", "text": "Extract ALL text from this image exactly as it appears. Include names, numbers, dates, addresses. Output only the raw extracted text, nothing else, no explanations."}
+                    ]
+                }],
+                max_tokens=1000,
+                temperature=0.0
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            st.warning(f"Groq Vision failed, falling back to Tesseract: {e}")
+
+    # ── Tesseract fallback ──
+    from PIL import ImageEnhance, ImageOps
     import pytesseract
-
     img = Image.open(io.BytesIO(fb))
-
-    # Downscale very large images for speed
-    max_dim = 1800
     w, h = img.size
-    if max(w, h) > max_dim:
-        scale = max_dim / max(w, h)
-        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-
-    img = img.convert("L")                        # grayscale
-    img = ImageOps.autocontrast(img)              # auto-normalize contrast
-    img = ImageEnhance.Sharpness(img).enhance(2.0)
-
-    # Binarize using threshold — removes background noise
-    img = img.point(lambda x: 0 if x < 140 else 255, '1')
+    if max(w, h) > 1600:
+        scale = 1600 / max(w, h)
+        img = img.resize((int(w*scale), int(h*scale)), Image.LANCZOS)
     img = img.convert("L")
-
-    # psm 4 = single column (best for documents/resumes/Aadhaar)
-    # psm 6 = single block (best for simple cards)
-    # Try psm 4 first for multi-line documents
-    config = "--oem 3 --psm 4"
-    text = pytesseract.image_to_string(img, lang="eng", config=config).strip()
-
-    # Fallback to psm 6 if result is too short
-    if len(text) < 50:
-        config = "--oem 3 --psm 6"
-        text = pytesseract.image_to_string(img, lang="eng", config=config).strip()
-
-    return text
+    img = ImageOps.autocontrast(img)
+    img = img.point(lambda x: 0 if x < 140 else 255, '1').convert("L")
+    return pytesseract.image_to_string(img, lang="eng", config="--oem 3 --psm 4").strip()
 
 def extract_text(fb, ext):
     if ext in IMAGE_EXTS:
