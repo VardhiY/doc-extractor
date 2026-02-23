@@ -4,19 +4,15 @@ import re
 import os
 import base64
 
-# ── GROQ CLIENT FOR IMAGE OCR ──
-api_key = os.environ.get("GROQ_API_KEY")
-if not api_key:
-    try:
-        api_key = st.secrets.get("GROQ_API_KEY")
-    except:
-        pass
+# ── MUST BE FIRST STREAMLIT CALL ──
+st.set_page_config(page_title="DocVault Enterprise", page_icon="🔐", layout="wide")
+
+# ── GROQ CLIENT (after set_page_config) ──
+api_key = os.environ.get("GROQ_API_KEY", "")
 groq_client = None
 if api_key:
     from groq import Groq
     groq_client = Groq(api_key=api_key)
-
-st.set_page_config(page_title="DocVault Enterprise", page_icon="🔐", layout="wide")
 
 st.markdown("""
 <style>
@@ -42,7 +38,8 @@ with col1:
     st.markdown('<div class="card"><div class="pass">✔ Malware Signature Scan</div>Detects suspicious executable and embedded script patterns.</div>', unsafe_allow_html=True)
 with col2:
     st.markdown('<div class="card"><div class="pass">✔ Corruption Detection</div>Attempts structured parsing before extraction.</div>', unsafe_allow_html=True)
-    st.markdown('<div class="card"><div class="info">🔍 Image OCR Enabled</div>Extracts text from PNG, JPG, JPEG, BMP, TIFF images using Tesseract OCR.</div>', unsafe_allow_html=True)
+    ocr_label = "Groq Vision AI" if groq_client else "Tesseract OCR"
+    st.markdown(f'<div class="card"><div class="info">🔍 Image OCR via {ocr_label}</div>Extracts text from PNG, JPG, JPEG, BMP, TIFF images.</div>', unsafe_allow_html=True)
 
 # REDACTION CONTROLS
 st.markdown('<div class="section-title">Redaction Controls</div>', unsafe_allow_html=True)
@@ -94,21 +91,18 @@ def check_integrity(fb, ext):
             from pptx import Presentation; Presentation(io.BytesIO(fb))
         elif ext in IMAGE_EXTS:
             from PIL import Image
-            img = Image.open(io.BytesIO(fb))
-            img.verify()
+            Image.open(io.BytesIO(fb)).verify()
         return True
     except:
         return False
 
 def ocr_image(fb):
-    """Use Groq Vision for accurate fast OCR. Falls back to tesseract if no API key."""
     from PIL import Image
 
     # ── Groq Vision (fast + accurate) ──
     if groq_client:
         try:
             img = Image.open(io.BytesIO(fb)).convert("RGB")
-            # Resize to max 1200px for faster API response
             w, h = img.size
             if max(w, h) > 1200:
                 scale = 1200 / max(w, h)
@@ -122,7 +116,7 @@ def ocr_image(fb):
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-                        {"type": "text", "text": "Extract ALL text from this image exactly as it appears. Include names, numbers, dates, addresses. Output only the raw extracted text, nothing else, no explanations."}
+                        {"type": "text", "text": "Extract ALL text from this image exactly as it appears. Include names, numbers, dates, addresses. Output only the raw extracted text, nothing else."}
                     ]
                 }],
                 max_tokens=1000,
@@ -156,14 +150,14 @@ def extract_text(fb, ext):
         if not text.strip():
             try:
                 import fitz
-                from PIL import Image
                 import pytesseract
+                from PIL import Image
                 doc = fitz.open(stream=fb, filetype="pdf")
                 pages = []
                 for i, page in enumerate(doc):
-                    pix = page.get_pixmap(dpi=200)
+                    pix = page.get_pixmap(dpi=150)
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples).convert("L")
-                    pages.append(pytesseract.image_to_string(img))
+                    pages.append(pytesseract.image_to_string(img, config="--oem 3 --psm 4"))
                 text = "\n".join(pages)
             except Exception as e:
                 st.warning(f"Scanned PDF OCR error: {e}")
@@ -234,7 +228,7 @@ if st.button("🔐 Secure Extract"):
         st.success("✅ File passed all security layers.")
 
         if ext in IMAGE_EXTS:
-            st.info("🔍 Image detected — running OCR...")
+            st.info(f"🔍 Image detected — extracting text with {ocr_label}...")
 
         with st.spinner("Extracting text..."):
             try:
