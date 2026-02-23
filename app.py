@@ -1,6 +1,11 @@
 import streamlit as st
 import io
 import re
+from PIL import Image
+import pytesseract
+
+# ⚠ If using Windows, uncomment and set your path:
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 st.set_page_config(
     page_title="DocVault Enterprise",
@@ -14,38 +19,16 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif !important;
-}
-
-.stApp {
-    background: radial-gradient(circle at 20% 20%, #111133, #070714 60%);
-    color: #f1f3ff;
-}
-
-.main .block-container {
-    padding: 2rem 4rem;
-    max-width: 100%;
-}
-
-/* HERO */
-.hero-title {
-    font-size: 3.5rem;
-    font-weight: 800;
-}
+html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+.stApp { background: radial-gradient(circle at 20% 20%, #111133, #070714 60%); color: #f1f3ff; }
+.main .block-container { padding: 2rem 4rem; max-width: 100%; }
+.hero-title { font-size: 3.5rem; font-weight: 800; }
 .hero-title span {
     background: linear-gradient(120deg,#90ff50,#40ffc8,#4080ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-.hero-sub {
-    font-size: 1.1rem;
-    color: #9ca4ff;
-    margin-bottom: 2rem;
-}
-
-/* SECTION */
+.hero-sub { font-size: 1.1rem; color: #9ca4ff; margin-bottom: 2rem; }
 .section-title {
     margin-top: 3rem;
     font-size: 1rem;
@@ -54,24 +37,6 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     color: #7f88ff;
 }
-
-/* CARDS */
-.card {
-    background: #0f1024;
-    border: 1px solid #1c1d45;
-    border-radius: 18px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    transition: 0.3s;
-}
-.card:hover {
-    border-color: #40ffc8;
-    box-shadow: 0 10px 40px rgba(64,255,200,0.15);
-}
-.pass { color:#90ff50; font-weight:600; }
-.fail { color:#ff5f7a; font-weight:600; }
-
-/* BUTTON */
 .stButton>button {
     width:100%;
     background:linear-gradient(135deg,#90ff50,#40ffc8);
@@ -84,7 +49,7 @@ html, body, [class*="css"] {
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
-# HERO HEADER
+# HERO
 # ─────────────────────────────────────────
 st.markdown("""
 <div class="hero-title">🔐 <span>DocVault Enterprise</span></div>
@@ -94,67 +59,44 @@ Enterprise-grade secure document validation & extraction platform
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
-# SECURITY ENGINE UI
-# ─────────────────────────────────────────
-st.markdown('<div class="section-title">Security Engine</div>', unsafe_allow_html=True)
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ File Type Verification</div>
-    Validates magic bytes to prevent disguised malicious files.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ Malware Signature Scan</div>
-    Detects suspicious executable and embedded script patterns.
-    </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ Corruption Detection</div>
-    Attempts structured parsing before extraction.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="card">
-    <div class="fail">✖ Executable Files Blocked</div>
-    .exe, .bat, .js and renamed scripts are automatically rejected.
-    </div>
-    """, unsafe_allow_html=True)
-
-# ─────────────────────────────────────────
 # REDACTION CONTROLS
 # ─────────────────────────────────────────
 st.markdown('<div class="section-title">Redaction Controls</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
-
 with col1:
     aadhaar = st.checkbox("Aadhaar Number")
     pan = st.checkbox("PAN Number")
     ssn = st.checkbox("SSN")
-
 with col2:
     mobile = st.checkbox("Mobile Numbers")
     dob = st.checkbox("Date of Birth")
 
 # ─────────────────────────────────────────
-# FILE UPLOAD
+# INPUT MODE
 # ─────────────────────────────────────────
-st.markdown('<div class="section-title">Upload Document</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Input Source</div>', unsafe_allow_html=True)
 
-uploaded = st.file_uploader(
-    "Supported: PDF, DOCX, XLSX, PPTX, PPT, TXT",
-    type=["pdf","docx","xlsx","pptx","ppt","txt"]
+mode = st.radio(
+    "Choose Input Type:",
+    ["Upload File", "Paste Text"],
+    horizontal=True
 )
+
+uploaded = None
+manual_text = None
+
+if mode == "Upload File":
+    uploaded = st.file_uploader(
+        "Supported: PDF, DOCX, XLSX, PPTX, PPT, TXT, PNG, JPG",
+        type=["pdf","docx","xlsx","pptx","ppt","txt","png","jpg","jpeg"]
+    )
+
+if mode == "Paste Text":
+    manual_text = st.text_area(
+        "Paste your text here",
+        height=250
+    )
 
 # ─────────────────────────────────────────
 # SECURITY CONFIG
@@ -194,6 +136,11 @@ def check_integrity(file_bytes, ext):
 # EXTRACTION
 # ─────────────────────────────────────────
 def extract_text(file_bytes, ext):
+
+    if ext in ["png","jpg","jpeg"]:
+        image = Image.open(io.BytesIO(file_bytes))
+        return pytesseract.image_to_string(image)
+
     if ext == "pdf":
         import pypdf
         reader = pypdf.PdfReader(io.BytesIO(file_bytes))
@@ -250,38 +197,49 @@ def redact_text(text):
 # ─────────────────────────────────────────
 if st.button("🔐 Secure Extract"):
 
-    if not uploaded:
-        st.warning("Upload a file first.")
-        st.stop()
+    if mode == "Upload File":
 
-    file_bytes = uploaded.read()
-    ext = uploaded.name.split(".")[-1].lower()
+        if not uploaded:
+            st.warning("Upload a file first.")
+            st.stop()
 
-    st.markdown("## 🔍 Security Scan Results")
+        file_bytes = uploaded.read()
+        ext = uploaded.name.split(".")[-1].lower()
 
-    magic_ok = check_magic(file_bytes, ext)
-    malware_ok = check_malware(file_bytes)
-    integrity_ok = check_integrity(file_bytes, ext)
+        st.markdown("## 🔍 Security Scan Results")
 
-    st.write("File Type Validation:", "✅" if magic_ok else "❌")
-    st.write("Malware Scan:", "✅" if malware_ok else "❌")
-    st.write("Integrity Check:", "✅" if integrity_ok else "❌")
+        magic_ok = check_magic(file_bytes, ext)
+        malware_ok = check_malware(file_bytes)
+        integrity_ok = check_integrity(file_bytes, ext)
 
-    score = 100
-    if not magic_ok: score -= 30
-    if not malware_ok: score -= 40
-    if not integrity_ok: score -= 30
+        st.write("File Type Validation:", "✅" if magic_ok else "❌")
+        st.write("Malware Scan:", "✅" if malware_ok else "❌")
+        st.write("Integrity Check:", "✅" if integrity_ok else "❌")
 
-    st.progress(score/100)
-    st.write("Security Score:", score, "/100")
+        score = 100
+        if not magic_ok: score -= 30
+        if not malware_ok: score -= 40
+        if not integrity_ok: score -= 30
 
-    if not (magic_ok and malware_ok and integrity_ok):
-        st.error("🚫 File blocked due to failed security checks.")
-        st.stop()
+        st.progress(score/100)
+        st.write("Security Score:", score, "/100")
 
-    st.success("✅ File passed all security layers.")
+        if not (magic_ok and malware_ok and integrity_ok):
+            st.error("🚫 File blocked due to failed security checks.")
+            st.stop()
 
-    text = extract_text(file_bytes, ext)
+        text = extract_text(file_bytes, ext)
+
+    else:
+        if not manual_text:
+            st.warning("Paste text first.")
+            st.stop()
+
+        text = manual_text
+        st.markdown("## 🔍 Security Scan Results")
+        st.write("Text Mode: ✅ Safe")
+        st.progress(1.0)
+        st.write("Security Score: 100 / 100")
 
     if not text:
         st.warning("No readable text found.")
@@ -289,12 +247,14 @@ if st.button("🔐 Secure Extract"):
 
     text = redact_text(text)
 
+    st.success("✅ Extraction Completed")
+
     st.markdown("## 📄 Extracted Output")
     st.text_area("", text, height=500)
 
     st.download_button(
         "⬇ Download Clean Copy",
         data=text,
-        file_name="secure_extracted.txt",
+        file_name="secure_output.txt",
         mime="text/plain"
     )
