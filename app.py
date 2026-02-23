@@ -91,10 +91,23 @@ def check_integrity(fb, ext):
 def ocr_image(fb):
     from PIL import Image, ImageEnhance, ImageFilter
     import pytesseract
-    img = Image.open(io.BytesIO(fb)).convert("L")
-    img = ImageEnhance.Contrast(img).enhance(2.0)
+
+    img = Image.open(io.BytesIO(fb))
+
+    # Downscale large images — biggest speed improvement
+    max_dim = 1600
+    w, h = img.size
+    if max(w, h) > max_dim:
+        scale = max_dim / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+    img = img.convert("L")                          # grayscale
+    img = ImageEnhance.Contrast(img).enhance(2.5)   # boost contrast for dark Aadhaar text
     img = img.filter(ImageFilter.SHARPEN)
-    return pytesseract.image_to_string(img, lang="eng").strip()
+
+    # --oem 3 = best engine, --psm 6 = single uniform text block (fastest for cards)
+    config = "--oem 3 --psm 6"
+    return pytesseract.image_to_string(img, lang="eng", config=config).strip()
 
 def extract_text(fb, ext):
     if ext in IMAGE_EXTS:
