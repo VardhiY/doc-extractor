@@ -9,46 +9,22 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────
-# PREMIUM FULLSCREEN UI
+# PREMIUM UI
 # ─────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif !important;
 }
-
 .stApp {
     background: radial-gradient(circle at 20% 20%, #111133, #070714 60%);
     color: #f1f3ff;
 }
-
 .main .block-container {
-    padding: 2rem 4rem 4rem 4rem !important;
-    max-width: 100% !important;
+    padding: 2rem 4rem;
+    max-width: 100%;
 }
-
-/* HERO */
-.hero {
-    padding: 3rem 0 2rem;
-}
-.hero-title {
-    font-size: 4rem;
-    font-weight: 800;
-}
-.hero-title span {
-    background: linear-gradient(120deg,#90ff50,#40ffc8,#4080ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.hero-sub {
-    font-size: 1.2rem;
-    color: #9ca4ff;
-    margin-top: 0.5rem;
-}
-
-/* SECTION TITLE */
 .section-title {
     margin-top: 3rem;
     font-size: 1rem;
@@ -57,109 +33,45 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     color: #7f88ff;
 }
-
-/* CARDS */
-.card {
-    background: #0f1024;
-    border: 1px solid #1c1d45;
-    border-radius: 18px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    transition: 0.3s;
-}
-.card:hover {
-    border-color: #40ffc8;
-    box-shadow: 0 10px 40px rgba(64,255,200,0.15);
-}
-
-/* STATUS COLORS */
 .pass { color:#90ff50; font-weight:600; }
 .fail { color:#ff5f7a; font-weight:600; }
-
-/* UPLOAD BOX */
-div[data-testid="stFileUploader"] {
-    background:#0f1024 !important;
-    border:2px dashed #2a2c66 !important;
-    border-radius:20px !important;
-    padding:2rem !important;
-}
-div[data-testid="stFileUploader"]:hover {
-    border-color:#40ffc8 !important;
-}
-
-/* BUTTON */
 .stButton>button {
     width:100%;
-    background:linear-gradient(135deg,#90ff50,#40ffc8) !important;
-    color:#050510 !important;
-    font-weight:800 !important;
-    font-size:1.1rem !important;
-    padding:1rem !important;
-    border-radius:14px !important;
+    background:linear-gradient(135deg,#90ff50,#40ffc8);
+    color:#050510;
+    font-weight:800;
+    padding:1rem;
+    border-radius:14px;
 }
-
-/* TEXT OUTPUT */
 textarea {
     background:#0b0c20 !important;
     border:1px solid #20225a !important;
     color:#e0e3ff !important;
     border-radius:12px !important;
-    font-size:0.95rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────
-# HERO
-# ─────────────────────────────────────────
-st.markdown("""
-<div class="hero">
-<div class="hero-title">Doc<span>Vault</span></div>
-<div class="hero-sub">
-Enterprise-grade secure document validation & extraction platform
-</div>
-</div>
-""", unsafe_allow_html=True)
+st.title("🔐 DocVault Enterprise")
+st.caption("Secure Document Validation & Extraction Platform")
 
 # ─────────────────────────────────────────
-# SECURITY DASHBOARD
+# REDACTION CONTROLS
 # ─────────────────────────────────────────
-st.markdown('<div class="section-title">Security Engine</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Redaction Controls</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
-
 with col1:
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ File Type Verification</div>
-    Validates magic bytes to prevent disguised malicious files.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ Malware Signature Scan</div>
-    Detects suspicious executable and embedded script patterns.
-    </div>
-    """, unsafe_allow_html=True)
+    aadhaar = st.checkbox("Aadhaar Number")
+    pan = st.checkbox("PAN Number")
+    ssn = st.checkbox("SSN")
 
 with col2:
-    st.markdown("""
-    <div class="card">
-    <div class="pass">✔ Corruption Detection</div>
-    Attempts structured parsing before extraction.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="card">
-    <div class="fail">✖ Executable Files Blocked</div>
-    .exe, .bat, .js and renamed scripts are automatically rejected.
-    </div>
-    """, unsafe_allow_html=True)
+    mobile = st.checkbox("Mobile Numbers")
+    dob = st.checkbox("Date of Birth")
 
 # ─────────────────────────────────────────
-# UPLOAD SECTION
+# FILE UPLOAD
 # ─────────────────────────────────────────
 st.markdown('<div class="section-title">Upload Document</div>', unsafe_allow_html=True)
 
@@ -169,7 +81,7 @@ uploaded = st.file_uploader(
 )
 
 # ─────────────────────────────────────────
-# SECURITY LOGIC
+# SECURITY CONFIG
 # ─────────────────────────────────────────
 MALWARE_SIGS = [b"cmd.exe", b"powershell", b"eval(", b"WScript"]
 MAGIC_BYTES = {
@@ -203,9 +115,10 @@ def check_integrity(file_bytes, ext):
         return False
 
 # ─────────────────────────────────────────
-# EXTRACTION
+# TEXT EXTRACTION
 # ─────────────────────────────────────────
 def extract_text(file_bytes, ext):
+
     if ext == "pdf":
         import pypdf
         reader = pypdf.PdfReader(io.BytesIO(file_bytes))
@@ -242,39 +155,72 @@ def extract_text(file_bytes, ext):
     return None
 
 # ─────────────────────────────────────────
-# PROCESS
+# REDACTION ENGINE
+# ─────────────────────────────────────────
+def redact_text(text):
+    if aadhaar:
+        text = re.sub(r"\b\d{4}\s?\d{4}\s?\d{4}\b", "[REDACTED_AADHAAR]", text)
+    if pan:
+        text = re.sub(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b", "[REDACTED_PAN]", text)
+    if mobile:
+        text = re.sub(r"\b[6-9]\d{9}\b", "[REDACTED_MOBILE]", text)
+    if dob:
+        text = re.sub(r"\b\d{2}[-/]\d{2}[-/]\d{4}\b", "[REDACTED_DOB]", text)
+    if ssn:
+        text = re.sub(r"\b\d{3}-\d{2}-\d{4}\b", "[REDACTED_SSN]", text)
+    return text
+
+# ─────────────────────────────────────────
+# PROCESS BUTTON
 # ─────────────────────────────────────────
 if st.button("🔐 Secure Extract"):
 
     if not uploaded:
         st.warning("Upload a file first.")
-    else:
-        file_bytes = uploaded.read()
-        ext = uploaded.name.split(".")[-1].lower()
+        st.stop()
 
-        st.markdown("## 🔍 Security Scan Results")
+    file_bytes = uploaded.read()
+    ext = uploaded.name.split(".")[-1].lower()
 
-        magic_ok = check_magic(file_bytes, ext)
-        malware_ok = check_malware(file_bytes)
-        integrity_ok = check_integrity(file_bytes, ext)
+    st.markdown("## 🔍 Security Scan Results")
 
-        st.write("File Type Validation:", "✅" if magic_ok else "❌")
-        st.write("Malware Scan:", "✅" if malware_ok else "❌")
-        st.write("Integrity Check:", "✅" if integrity_ok else "❌")
+    magic_ok = check_magic(file_bytes, ext)
+    malware_ok = check_malware(file_bytes)
+    integrity_ok = check_integrity(file_bytes, ext)
 
-        if not (magic_ok and malware_ok and integrity_ok):
-            st.error("🚫 File blocked due to failed security checks.")
-            st.stop()
+    st.write("File Type Validation:", "✅" if magic_ok else "❌")
+    st.write("Malware Scan:", "✅" if malware_ok else "❌")
+    st.write("Integrity Check:", "✅" if integrity_ok else "❌")
 
-        st.success("✅ File passed all security layers.")
+    score = 100
+    if not magic_ok: score -= 30
+    if not malware_ok: score -= 40
+    if not integrity_ok: score -= 30
 
-        text = extract_text(file_bytes, ext)
+    st.progress(score/100)
+    st.write("Security Score:", score, "/100")
 
-        st.markdown("## 📄 Extracted Output")
+    if not (magic_ok and malware_ok and integrity_ok):
+        st.error("🚫 File blocked due to failed security checks.")
+        st.stop()
 
-        if text:
-            st.text_area("", text, height=500)
-        else:
-            st.warning("No readable text found.")
+    st.success("✅ File passed all security layers.")
 
+    text = extract_text(file_bytes, ext)
 
+    if not text:
+        st.warning("No readable text found.")
+        st.stop()
+
+    # Apply Redaction
+    text = redact_text(text)
+
+    st.markdown("## 📄 Extracted Output")
+    st.text_area("", text, height=500)
+
+    st.download_button(
+        "⬇ Download Clean Copy",
+        data=text,
+        file_name="secure_extracted.txt",
+        mime="text/plain"
+    )
