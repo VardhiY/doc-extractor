@@ -89,25 +89,38 @@ def check_integrity(fb, ext):
         return False
 
 def ocr_image(fb):
-    from PIL import Image, ImageEnhance, ImageFilter
+    from PIL import Image, ImageEnhance, ImageFilter, ImageOps
     import pytesseract
 
     img = Image.open(io.BytesIO(fb))
 
-    # Downscale large images — biggest speed improvement
-    max_dim = 1600
+    # Downscale very large images for speed
+    max_dim = 1800
     w, h = img.size
     if max(w, h) > max_dim:
         scale = max_dim / max(w, h)
         img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
 
-    img = img.convert("L")                          # grayscale
-    img = ImageEnhance.Contrast(img).enhance(2.5)   # boost contrast for dark Aadhaar text
-    img = img.filter(ImageFilter.SHARPEN)
+    img = img.convert("L")                        # grayscale
+    img = ImageOps.autocontrast(img)              # auto-normalize contrast
+    img = ImageEnhance.Sharpness(img).enhance(2.0)
 
-    # --oem 3 = best engine, --psm 6 = single uniform text block (fastest for cards)
-    config = "--oem 3 --psm 6"
-    return pytesseract.image_to_string(img, lang="eng", config=config).strip()
+    # Binarize using threshold — removes background noise
+    img = img.point(lambda x: 0 if x < 140 else 255, '1')
+    img = img.convert("L")
+
+    # psm 4 = single column (best for documents/resumes/Aadhaar)
+    # psm 6 = single block (best for simple cards)
+    # Try psm 4 first for multi-line documents
+    config = "--oem 3 --psm 4"
+    text = pytesseract.image_to_string(img, lang="eng", config=config).strip()
+
+    # Fallback to psm 6 if result is too short
+    if len(text) < 50:
+        config = "--oem 3 --psm 6"
+        text = pytesseract.image_to_string(img, lang="eng", config=config).strip()
+
+    return text
 
 def extract_text(fb, ext):
     if ext in IMAGE_EXTS:
