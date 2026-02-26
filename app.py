@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ══════════════════════════════════════════════════════════
-# GLOBAL STYLING — LEXIS AI light style
+# GLOBAL STYLING — Colorful vivid theme
 # ══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -22,24 +22,35 @@ st.markdown("""
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* ── BASE ── */
+/* ══ BASE ══ */
 .stApp {
-    background: #f0f4f8 !important;
-    color: #1a2332 !important;
+    background: #050714 !important;
+    color: #f0f0ff !important;
     font-family: 'DM Sans', sans-serif !important;
     font-size: 15px !important;
 }
 
-/* Soft gradient mesh — same as LEXIS AI */
+/* Vivid animated blob background */
 .stApp::before {
     content: '';
     position: fixed; inset: 0;
     background:
-        radial-gradient(ellipse 1000px 700px at 20% 0%,  rgba(186,230,255,0.50) 0%, transparent 60%),
-        radial-gradient(ellipse  800px 600px at 85% 10%, rgba(199,210,254,0.40) 0%, transparent 60%),
-        radial-gradient(ellipse  700px 600px at 10% 90%, rgba(167,243,208,0.28) 0%, transparent 60%),
-        radial-gradient(ellipse  900px 500px at 90% 95%, rgba(196,181,253,0.22) 0%, transparent 60%);
+        radial-gradient(ellipse 900px 800px at -10% -10%, rgba(99,102,241,0.65)  0%, transparent 55%),
+        radial-gradient(ellipse 800px 700px at 110%  15%, rgba(236,72,153,0.55)  0%, transparent 55%),
+        radial-gradient(ellipse 700px 650px at 110% 110%, rgba(245,158,11,0.40)  0%, transparent 55%),
+        radial-gradient(ellipse 650px 600px at -10% 110%, rgba(16,185,129,0.40)  0%, transparent 55%),
+        radial-gradient(ellipse 500px 450px at  50%  50%, rgba(139,92,246,0.18)  0%, transparent 55%),
+        radial-gradient(ellipse 400px 350px at  80%  55%, rgba(251,146,60,0.22)  0%, transparent 50%);
     pointer-events: none; z-index: 0;
+    animation: blobDrift 22s ease-in-out infinite alternate;
+    filter: blur(38px);
+}
+@keyframes blobDrift {
+    0%   { transform: scale(1)    translate(0px,    0px);  }
+    25%  { transform: scale(1.03) translate(22px,  -18px); }
+    50%  { transform: scale(0.97) translate(-16px,  22px); }
+    75%  { transform: scale(1.04) translate(12px,   14px); }
+    100% { transform: scale(0.98) translate(-10px, -12px); }
 }
 
 .block-container {
@@ -54,211 +65,223 @@ st.markdown("""
 
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
 
 /* ══ NAV ══ */
 .dv-nav {
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.1rem 0;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
     margin-bottom: 0;
-    background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(12px);
+    background: rgba(5,7,20,0.6);
+    backdrop-filter: blur(16px);
 }
 .dv-logo-wrap { display: flex; align-items: center; gap: 0.5rem; }
 .dv-logo-icon {
     width: 32px; height: 32px;
-    background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+    background: linear-gradient(135deg, #6366f1, #ec4899);
     border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.9rem;
-    box-shadow: 0 3px 10px rgba(29,78,216,0.3);
+    box-shadow: 0 3px 12px rgba(99,102,241,0.5);
 }
 .dv-logo-text {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1.08rem; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;
+    font-size: 1.08rem; font-weight: 800; color: #f0f0ff; letter-spacing: -0.3px;
 }
 .dv-logo-text span {
-    background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
+    background: linear-gradient(90deg, #a78bfa, #f472b6);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .dv-nav-badge {
     font-family: 'DM Mono', monospace;
     font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase;
-    color: #64748b; border: 1px solid #e2e8f0; background: rgba(255,255,255,0.8);
+    color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
     padding: 0.28rem 0.9rem; border-radius: 100px;
 }
 .dv-status {
     display: flex; align-items: center; gap: 0.4rem;
-    font-size: 0.78rem; font-weight: 500; color: #64748b;
+    font-size: 0.78rem; font-weight: 500; color: rgba(255,255,255,0.5);
 }
 .dv-status-dot {
     width: 7px; height: 7px; background: #22c55e; border-radius: 50%;
-    box-shadow: 0 0 6px rgba(34,197,94,0.6); animation: sDot 2.5s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(34,197,94,0.7); animation: sDot 2.5s ease-in-out infinite;
 }
-@keyframes sDot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+@keyframes sDot { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
 /* ══ HERO ══ */
 .dv-hero { text-align: center; padding: 2.8rem 0 2.2rem; }
 .dv-hero-tag {
     display: inline-flex; align-items: center; gap: 0.4rem;
-    background: rgba(255,255,255,0.85); border: 1px solid #e2e8f0;
-    border-radius: 100px; padding: 0.28rem 0.9rem;
-    font-size: 0.75rem; font-weight: 600; color: #475569;
-    margin-bottom: 1.2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 100px; padding: 0.3rem 0.95rem;
+    font-size: 0.76rem; font-weight: 600; color: #a78bfa;
+    margin-bottom: 1.2rem; letter-spacing: 0.03em;
 }
 .dv-hero-tag::before {
     content: ''; width: 6px; height: 6px;
-    background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+    background: linear-gradient(135deg, #6366f1, #ec4899);
     border-radius: 50%; flex-shrink: 0;
+    animation: tagPulse 2s ease-in-out infinite;
 }
+@keyframes tagPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 .dv-h1 {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: clamp(2.2rem, 4.5vw, 3.5rem);
     font-weight: 800; line-height: 1.1; letter-spacing: -1px;
-    color: #0f172a; margin-bottom: 0;
+    color: #f0f0ff; margin-bottom: 0;
 }
 .dv-h1-accent {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: clamp(2.2rem, 4.5vw, 3.5rem);
     font-weight: 800; line-height: 1.1; letter-spacing: -1px;
-    background: linear-gradient(90deg, #1d4ed8, #0ea5e9);
+    background: linear-gradient(90deg, #818cf8, #f472b6, #fb923c);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text; display: block; margin-bottom: 0.9rem;
 }
 .dv-hero-sub {
-    font-size: 0.97rem; color: #64748b;
-    max-width: 430px; margin: 0 auto; line-height: 1.7;
+    font-size: 0.97rem; color: rgba(255,255,255,0.45);
+    max-width: 450px; margin: 0 auto; line-height: 1.7;
 }
 
 /* ══ CARD ══ */
 .dv-card {
-    background: rgba(255,255,255,0.82);
-    border: 1px solid rgba(255,255,255,0.9);
-    border-radius: 16px; padding: 1.5rem 1.5rem 1rem;
+    background: rgba(10,8,28,0.70);
+    border: 1px solid rgba(99,102,241,0.15);
+    border-radius: 18px; padding: 1.5rem 1.5rem 1rem;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+    backdrop-filter: blur(18px);
 }
 
 /* ══ SECTION LABEL ══ */
 .dv-sec-label {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #64748b;
+    text-transform: uppercase; color: rgba(255,255,255,0.35);
     margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
 }
-.dv-sec-label::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+.dv-sec-label::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
 
 /* ══ CHECKBOXES ══ */
 .stCheckbox > label {
-    font-size: 0.92rem !important; font-weight: 500 !important; color: #334155 !important;
-    gap: 0.5rem !important;
-}
-.stCheckbox > label > span:first-child {
-    width: 16px !important; height: 16px !important;
-    border: 1.5px solid #cbd5e1 !important; border-radius: 4px !important;
+    font-size: 0.9rem !important; font-weight: 500 !important;
+    color: rgba(255,255,255,0.75) !important; gap: 0.5rem !important;
 }
 
 /* ══ RADIO ══ */
-.stRadio > label { font-size: 0.9rem !important; color: #334155 !important; }
-div[data-testid="stRadio"] label { font-size: 0.92rem !important; }
+.stRadio > label { font-size: 0.9rem !important; color: rgba(255,255,255,0.7) !important; }
+div[data-testid="stRadio"] label { font-size: 0.92rem !important; color: rgba(255,255,255,0.75) !important; }
 
 /* ══ FILE UPLOADER ══ */
-[data-testid="stFileUploader"] {
-    background: #ffffff !important;
-    border: 2px dashed #cbd5e1 !important;
-    border-radius: 12px !important;
-    padding: 1rem !important;
-    transition: border-color 0.2s !important;
+[data-testid="stFileUploader"] section {
+    background: rgba(99,102,241,0.06) !important;
+    border: 2px dashed rgba(99,102,241,0.35) !important;
+    border-radius: 14px !important;
+    transition: all 0.2s !important;
 }
-[data-testid="stFileUploader"]:hover { border-color: #3b82f6 !important; }
-[data-testid="stFileUploader"] label { font-size: 0.88rem !important; color: #64748b !important; }
+[data-testid="stFileUploader"] section:hover {
+    border-color: rgba(99,102,241,0.65) !important;
+    background: rgba(99,102,241,0.10) !important;
+}
+[data-testid="stFileUploader"] section p { color: rgba(255,255,255,0.45) !important; }
 
 /* ══ TEXT AREA / INPUT ══ */
 textarea, .stTextInput input {
-    background: #ffffff !important; border: 1.5px solid #e2e8f0 !important;
-    border-radius: 10px !important; color: #1a2332 !important;
+    background: rgba(255,255,255,0.05) !important;
+    border: 1.5px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important; color: #f0f0ff !important;
     font-family: 'DM Sans', sans-serif !important; font-size: 0.95rem !important;
     padding: 0.85rem 1rem !important; line-height: 1.6 !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    transition: all 0.2s !important; caret-color: #818cf8 !important;
 }
 textarea:focus, .stTextInput input:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.1) !important; outline: none !important;
+    border-color: rgba(99,102,241,0.55) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important; outline: none !important;
+    background: rgba(255,255,255,0.07) !important;
 }
-textarea::placeholder { color: #94a3b8 !important; }
+textarea::placeholder, .stTextInput input::placeholder { color: rgba(255,255,255,0.25) !important; }
 
 /* ══ PRIMARY BUTTON ══ */
 .stButton > button {
     width: 100% !important;
-    background: linear-gradient(90deg, #1d4ed8, #0ea5e9) !important;
-    border: none !important; border-radius: 10px !important; color: #fff !important;
+    background: linear-gradient(135deg, #6366f1, #ec4899) !important;
+    border: none !important; border-radius: 12px !important; color: #fff !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 700 !important;
-    font-size: 1rem !important; padding: 0.82rem 1.5rem !important;
+    font-size: 1rem !important; padding: 0.88rem 1.5rem !important;
     margin-top: 0.65rem !important; transition: all 0.2s !important;
-    box-shadow: 0 3px 12px rgba(29,78,216,0.28) !important;
+    box-shadow: 0 4px 18px rgba(99,102,241,0.45) !important;
+    letter-spacing: 0.01em !important;
 }
 .stButton > button:hover {
     opacity: 0.9 !important; transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(29,78,216,0.38) !important;
+    box-shadow: 0 8px 28px rgba(99,102,241,0.55) !important;
 }
+.stButton > button:active { transform: translateY(0) !important; }
 
 /* ══ DOWNLOAD BUTTON ══ */
 .stDownloadButton > button {
-    background: #ffffff !important; border: 1.5px solid #e2e8f0 !important;
-    color: #475569 !important; font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important; border-radius: 8px !important;
-    padding: 0.45rem 1rem !important; font-size: 0.85rem !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important; transition: all 0.18s !important;
-    margin-top: 0 !important;
+    background: rgba(255,255,255,0.06) !important;
+    border: 1.5px solid rgba(255,255,255,0.12) !important;
+    color: rgba(255,255,255,0.7) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important; border-radius: 9px !important;
+    padding: 0.48rem 1rem !important; font-size: 0.85rem !important;
+    margin-top: 0 !important; transition: all 0.18s !important;
 }
 .stDownloadButton > button:hover {
-    border-color: #1d4ed8 !important; color: #1d4ed8 !important; background: #eff6ff !important;
+    border-color: rgba(99,102,241,0.5) !important;
+    color: #a78bfa !important; background: rgba(99,102,241,0.1) !important;
 }
 
 /* ══ PROGRESS BAR ══ */
 .stProgress > div > div > div {
-    background: linear-gradient(90deg, #1d4ed8, #0ea5e9) !important;
+    background: linear-gradient(90deg, #6366f1, #f472b6) !important;
     border-radius: 100px !important;
 }
 .stProgress > div > div {
-    background: #e2e8f0 !important; border-radius: 100px !important;
+    background: rgba(255,255,255,0.08) !important; border-radius: 100px !important;
 }
 
 /* ══ SECURITY BADGES ══ */
 .sec-badge-row {
     display: flex; align-items: center; justify-content: space-between;
-    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
-    padding: 0.7rem 1rem; margin-bottom: 0.5rem;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 0.5rem;
+    transition: background 0.18s;
 }
-.sec-badge-label { font-size: 0.9rem; font-weight: 600; color: #334155; }
+.sec-badge-row:hover { background: rgba(255,255,255,0.07); }
+.sec-badge-label { font-size: 0.9rem; font-weight: 600; color: rgba(255,255,255,0.8); }
 .sec-badge-pass {
     display: inline-flex; align-items: center; gap: 0.3rem;
-    font-size: 0.78rem; font-weight: 700; color: #16a34a;
-    background: #dcfce7; border: 1px solid #bbf7d0;
+    font-size: 0.75rem; font-weight: 700; color: #4ade80;
+    background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.25);
     border-radius: 6px; padding: 0.18rem 0.55rem;
 }
 .sec-badge-fail {
     display: inline-flex; align-items: center; gap: 0.3rem;
-    font-size: 0.78rem; font-weight: 700; color: #dc2626;
-    background: #fee2e2; border: 1px solid #fecaca;
+    font-size: 0.75rem; font-weight: 700; color: #f87171;
+    background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.25);
     border-radius: 6px; padding: 0.18rem 0.55rem;
 }
 
 /* ══ SCORE DISPLAY ══ */
 .score-display {
     display: flex; align-items: center; gap: 1.5rem;
-    background: #f8fafc; border: 1px solid #e2e8f0;
-    border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.5rem;
+    background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 14px; padding: 1rem 1.2rem; margin-top: 0.5rem;
 }
 .score-num {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 2.2rem; font-weight: 800; line-height: 1;
 }
-.score-label { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.15rem; }
+.score-label {
+    font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 0.15rem;
+}
 .score-bar-wrap { flex: 1; }
-.score-bar-bg { height: 8px; background: #e2e8f0; border-radius: 100px; overflow: hidden; }
+.score-bar-bg { height: 8px; background: rgba(255,255,255,0.08); border-radius: 100px; overflow: hidden; }
 .score-bar-fill { height: 100%; border-radius: 100px; }
 
 /* ══ OUTPUT HEADER (Copy + Download top-right) ══ */
@@ -269,42 +292,60 @@ textarea::placeholder { color: #94a3b8 !important; }
 .output-title {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #64748b;
+    text-transform: uppercase; color: rgba(255,255,255,0.35);
     display: flex; align-items: center; gap: 0.5rem;
 }
-.output-title::after { content:''; width:40px; height:1px; background:#e2e8f0; }
-.output-actions {
-    display: flex; align-items: center; gap: 0.5rem;
-}
+.output-title::after { content:''; width:40px; height:1px; background:rgba(255,255,255,0.07); }
+.output-actions { display: flex; align-items: center; gap: 0.5rem; }
 .copy-btn {
     display: inline-flex; align-items: center; gap: 0.35rem;
     font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600;
-    color: #475569; background: #ffffff; border: 1.5px solid #e2e8f0;
-    border-radius: 7px; padding: 0.38rem 0.85rem; cursor: pointer;
-    transition: all 0.18s; text-decoration: none;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    color: #a78bfa; background: rgba(99,102,241,0.1);
+    border: 1.5px solid rgba(99,102,241,0.25);
+    border-radius: 8px; padding: 0.38rem 0.85rem; cursor: pointer;
+    transition: all 0.18s;
 }
-.copy-btn:hover { border-color: #1d4ed8; color: #1d4ed8; background: #eff6ff; }
+.copy-btn:hover { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.18); }
 
 /* ══ SIDEBAR CARDS ══ */
 .sc {
-    background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.9);
+    background: rgba(10,8,28,0.72); border: 1px solid rgba(99,102,241,0.14);
     border-radius: 14px; padding: 1.1rem 1.15rem; margin-bottom: 0.85rem;
-    box-shadow: 0 3px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 3px 20px rgba(0,0,0,0.25); backdrop-filter: blur(14px);
 }
 .sc-ttl {
     font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.72rem;
     font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    color: #475569; margin-bottom: 0.85rem; display:flex; align-items:center; gap:0.45rem;
+    color: rgba(255,255,255,0.35); margin-bottom: 0.85rem;
+    display: flex; align-items: center; gap: 0.45rem;
 }
-.sc-ttl::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+.sc-ttl::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.07); }
 
 /* ══ ALERTS ══ */
-.stAlert { background:#eff6ff !important; border:1px solid #bfdbfe !important; border-radius:10px !important; color:#1e40af !important; }
-.stSpinner > div { border-top-color: #1d4ed8 !important; }
+.stAlert { background:rgba(99,102,241,0.1) !important; border:1px solid rgba(99,102,241,0.25) !important; border-radius:10px !important; color:#c7d2fe !important; }
+.stSuccess { background:rgba(74,222,128,0.1) !important; border:1px solid rgba(74,222,128,0.22) !important; border-radius:10px !important; color:#86efac !important; }
+.stWarning { background:rgba(251,191,36,0.1) !important; border:1px solid rgba(251,191,36,0.22) !important; border-radius:10px !important; color:#fde68a !important; }
+.stError   { background:rgba(248,113,113,0.1) !important; border:1px solid rgba(248,113,113,0.22) !important; border-radius:10px !important; color:#fca5a5 !important; }
+.stSpinner > div { border-top-color: #818cf8 !important; }
 div[data-testid="stHorizontalBlock"] > div[data-testid="column"] { background:transparent !important; }
 div[data-testid="stForm"] { background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important; }
+
+/* ══ TABS ══ */
+div[data-baseweb="tab-list"] {
+    background: rgba(255,255,255,0.05) !important;
+    border-radius: 10px !important; padding: 4px !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    gap: 2px !important; margin-bottom: 1rem !important; width: fit-content !important;
+}
+div[data-baseweb="tab"] {
+    border-radius: 7px !important; color: rgba(255,255,255,0.35) !important;
+    font-weight: 600 !important; font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.9rem !important; padding: 0.42rem 1.1rem !important; transition: all 0.18s !important;
+}
+div[aria-selected="true"] {
+    background: linear-gradient(135deg, #6366f1, #ec4899) !important;
+    color: white !important; box-shadow: 0 2px 10px rgba(99,102,241,0.4) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -338,8 +379,7 @@ def check_integrity(fb, ext):
         elif ext in ["pptx","ppt"]:
             from pptx import Presentation; Presentation(io.BytesIO(fb))
         return True
-    except:
-        return False
+    except: return False
 
 def extract_text(fb, ext):
     if ext in ["png","jpg","jpeg"]:
@@ -394,7 +434,7 @@ st.markdown("""
 <div class="dv-hero">
   <div class="dv-hero-tag">Enterprise-Grade Security</div>
   <h1 class="dv-h1">Secure Document</h1>
-  <span class="dv-h1-accent">Validation & Extraction</span>
+  <span class="dv-h1-accent">Validation &amp; Extraction</span>
   <p class="dv-hero-sub">Upload any document — DocVault validates, scans for threats, redacts sensitive data, and extracts clean text securely.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -411,59 +451,63 @@ with right:
 
     # ── SUPPORTED / NOT SUPPORTED ──
     st.markdown("""
-<div style="background:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.9);border-radius:14px;padding:1.1rem 1.15rem;margin-bottom:0.85rem;box-shadow:0 3px 16px rgba(0,0,0,0.06);backdrop-filter:blur(10px);">
-  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#475569;margin-bottom:0.9rem;display:flex;align-items:center;gap:0.45rem;">
+<div style="background:rgba(10,8,28,0.72);border:1px solid rgba(99,102,241,0.14);border-radius:14px;padding:1.1rem 1.15rem;margin-bottom:0.85rem;backdrop-filter:blur(14px);box-shadow:0 3px 20px rgba(0,0,0,0.25);">
+
+  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:0.9rem;display:flex;align-items:center;gap:0.45rem;">
     How It Works
-    <span style="flex:1;height:1px;background:#e2e8f0;display:inline-block;"></span>
+    <span style="flex:1;height:1px;background:rgba(255,255,255,0.07);display:inline-block;"></span>
   </div>
 
-  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#16a34a;margin-bottom:0.45rem;">✓ &nbsp;Supported Formats</div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">PDF documents</span>
+  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#4ade80;margin-bottom:0.45rem;">✓ &nbsp;Supported Formats</div>
+
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">PDF documents</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Word DOCX files</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Word DOCX files</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Excel XLSX spreadsheets</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Excel XLSX spreadsheets</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">PowerPoint PPTX / PPT</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">PowerPoint PPTX / PPT</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Plain TXT files</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Plain TXT files</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #e2e8f0;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#dcfce7;border:1px solid #bbf7d0;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#16a34a;flex-shrink:0;">✓</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Images PNG / JPG (OCR)</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#4ade80;flex-shrink:0;">✓</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Images PNG / JPG (OCR)</span>
   </div>
 
-  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#dc2626;margin-top:0.8rem;margin-bottom:0.45rem;">✕ &nbsp;Not Supported</div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#fee2e2;border:1px solid #fecaca;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#dc2626;flex-shrink:0;">✕</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Encrypted / password PDFs</span>
+  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.66rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f87171;margin-top:0.8rem;margin-bottom:0.45rem;">✕ &nbsp;Not Supported</div>
+
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.22);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#f87171;flex-shrink:0;">✕</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Encrypted / password PDFs</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#fee2e2;border:1px solid #fecaca;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#dc2626;flex-shrink:0;">✕</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Scanned PDFs (no OCR layer)</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.22);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#f87171;flex-shrink:0;">✕</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Scanned PDFs (no OCR layer)</span>
   </div>
-  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid #f8fafc;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#fee2e2;border:1px solid #fecaca;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#dc2626;flex-shrink:0;">✕</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Files &gt; 200 MB</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.22);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#f87171;flex-shrink:0;">✕</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Files &gt; 200 MB</span>
   </div>
   <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;">
-    <span style="width:17px;height:17px;border-radius:4px;background:#fee2e2;border:1px solid #fecaca;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#dc2626;flex-shrink:0;">✕</span>
-    <span style="font-size:0.84rem;color:#475569;font-family:'DM Sans',sans-serif;">Executable / script files</span>
+    <span style="width:17px;height:17px;border-radius:4px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.22);display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;color:#f87171;flex-shrink:0;">✕</span>
+    <span style="font-size:0.84rem;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;">Executable / script files</span>
   </div>
+
 </div>
 """, unsafe_allow_html=True)
 
-    # ── REDACTION CONTROLS (sidebar) ──
+    # ── REDACTION CONTROLS ──
     st.markdown("""
 <div class="sc">
   <div class="sc-ttl">Redaction Controls</div>
@@ -486,20 +530,20 @@ with right:
 <div class="sc">
   <div class="sc-ttl">Security Checks</div>
   <div style="display:flex;flex-direction:column;gap:0.45rem;">
-    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:#334155;">
-      <span style="width:22px;height:22px;border-radius:6px;background:#dbeafe;border:1px solid #bfdbfe;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;color:#1d4ed8;flex-shrink:0;">🔍</span>
+    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:rgba(255,255,255,0.6);">
+      <span style="width:22px;height:22px;border-radius:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.28);display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">🔍</span>
       File type validation
     </div>
-    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:#334155;">
-      <span style="width:22px;height:22px;border-radius:6px;background:#dbeafe;border:1px solid #bfdbfe;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;color:#1d4ed8;flex-shrink:0;">🛡️</span>
+    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:rgba(255,255,255,0.6);">
+      <span style="width:22px;height:22px;border-radius:6px;background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">🛡️</span>
       Malware signature scan
     </div>
-    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:#334155;">
-      <span style="width:22px;height:22px;border-radius:6px;background:#dbeafe;border:1px solid #bfdbfe;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;color:#1d4ed8;flex-shrink:0;">✅</span>
+    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:rgba(255,255,255,0.6);">
+      <span style="width:22px;height:22px;border-radius:6px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">✅</span>
       Structural integrity check
     </div>
-    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:#334155;">
-      <span style="width:22px;height:22px;border-radius:6px;background:#dbeafe;border:1px solid #bfdbfe;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;color:#1d4ed8;flex-shrink:0;">🔒</span>
+    <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.84rem;color:rgba(255,255,255,0.6);">
+      <span style="width:22px;height:22px;border-radius:6px;background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;">🔒</span>
       PII redaction engine
     </div>
   </div>
@@ -512,7 +556,6 @@ with right:
 # ══════════════════════════════════════════════════════════
 with left:
 
-    # ── INPUT SOURCE ──
     st.markdown('<div class="dv-card">', unsafe_allow_html=True)
     st.markdown('<div class="dv-sec-label">Input Source</div>', unsafe_allow_html=True)
 
@@ -554,13 +597,10 @@ with left:
             malware_ok   = check_malware(file_bytes)
             integrity_ok = check_integrity(file_bytes, ext)
 
-            # Security results
             st.markdown('<div class="dv-sec-label" style="margin-top:1.2rem;">Security Scan Results</div>', unsafe_allow_html=True)
 
             def badge(ok):
-                if ok:
-                    return '<span class="sec-badge-pass">✓ Pass</span>'
-                return '<span class="sec-badge-fail">✗ Fail</span>'
+                return '<span class="sec-badge-pass">✓ Pass</span>' if ok else '<span class="sec-badge-fail">✗ Fail</span>'
 
             st.markdown(f"""
 <div class="sec-badge-row"><span class="sec-badge-label">🔍 File Type Validation</span>{badge(magic_ok)}</div>
@@ -573,20 +613,20 @@ with left:
             if not malware_ok:   score -= 40
             if not integrity_ok: score -= 30
 
-            pct   = score / 100
-            color = "#16a34a" if score == 100 else ("#d97706" if score >= 60 else "#dc2626")
+            color    = "#4ade80" if score == 100 else ("#fbbf24" if score >= 60 else "#f87171")
+            bar_grad = "linear-gradient(90deg,#6366f1,#a78bfa)" if score == 100 else ("linear-gradient(90deg,#f59e0b,#fbbf24)" if score >= 60 else "linear-gradient(90deg,#ef4444,#f87171)")
 
             st.markdown(f"""
 <div class="score-display">
   <div>
     <div class="score-label">Security Score</div>
     <div class="score-num" style="color:{color};">{score}</div>
-    <div style="font-size:0.68rem;color:#94a3b8;font-family:'DM Mono',monospace;">/ 100</div>
+    <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);font-family:'DM Mono',monospace;">/ 100</div>
   </div>
   <div class="score-bar-wrap">
     <div class="score-label">Scan Confidence</div>
-    <div class="score-bar-bg" style="margin-top:0.3rem;">
-      <div class="score-bar-fill" style="width:{score}%;background:{'linear-gradient(90deg,#16a34a,#4ade80)' if score==100 else ('linear-gradient(90deg,#d97706,#fbbf24)' if score>=60 else 'linear-gradient(90deg,#dc2626,#f87171)')};"></div>
+    <div class="score-bar-bg" style="margin-top:0.35rem;">
+      <div class="score-bar-fill" style="width:{score}%;background:{bar_grad};"></div>
     </div>
     <div style="font-size:0.72rem;color:{color};font-family:'DM Mono',monospace;margin-top:0.35rem;font-weight:600;">{score}% complete</div>
   </div>
@@ -609,22 +649,20 @@ with left:
             raw_text = manual_text
 
             st.markdown('<div class="dv-sec-label" style="margin-top:1.2rem;">Security Scan Results</div>', unsafe_allow_html=True)
-            st.markdown("""
-<div class="sec-badge-row"><span class="sec-badge-label">📝 Text Mode</span><span class="sec-badge-pass">✓ Safe</span></div>
-""", unsafe_allow_html=True)
+            st.markdown('<div class="sec-badge-row"><span class="sec-badge-label">📝 Text Mode</span><span class="sec-badge-pass">✓ Safe</span></div>', unsafe_allow_html=True)
             st.markdown("""
 <div class="score-display">
   <div>
     <div class="score-label">Security Score</div>
-    <div class="score-num" style="color:#16a34a;">100</div>
-    <div style="font-size:0.68rem;color:#94a3b8;font-family:'DM Mono',monospace;">/ 100</div>
+    <div class="score-num" style="color:#4ade80;">100</div>
+    <div style="font-size:0.65rem;color:rgba(255,255,255,0.25);font-family:'DM Mono',monospace;">/ 100</div>
   </div>
   <div class="score-bar-wrap">
     <div class="score-label">Scan Confidence</div>
-    <div class="score-bar-bg" style="margin-top:0.3rem;">
-      <div class="score-bar-fill" style="width:100%;background:linear-gradient(90deg,#16a34a,#4ade80);"></div>
+    <div class="score-bar-bg" style="margin-top:0.35rem;">
+      <div class="score-bar-fill" style="width:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);"></div>
     </div>
-    <div style="font-size:0.72rem;color:#16a34a;font-family:'DM Mono',monospace;margin-top:0.35rem;font-weight:600;">100% complete</div>
+    <div style="font-size:0.72rem;color:#4ade80;font-family:'DM Mono',monospace;margin-top:0.35rem;font-weight:600;">100% complete</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -650,18 +688,17 @@ with left:
     if "extracted_text" in st.session_state and st.session_state["extracted_text"]:
         clean = st.session_state["extracted_text"]
 
-        # Output header with Copy + Download top-right
         st.markdown("""
 <div class="output-header">
   <div class="output-title">Extracted Output</div>
-  <div class="output-actions" id="dv-output-actions">
+  <div class="output-actions">
     <button class="copy-btn" onclick="
       const ta = document.querySelector('#dv-output-ta textarea');
       if(ta){navigator.clipboard.writeText(ta.value).then(()=>{
         this.innerHTML='✓ Copied!';
-        this.style.color='#16a34a';
-        this.style.borderColor='#16a34a';
-        this.style.background='#f0fdf4';
+        this.style.color='#4ade80';
+        this.style.borderColor='rgba(74,222,128,0.4)';
+        this.style.background='rgba(74,222,128,0.1)';
         setTimeout(()=>{
           this.innerHTML='⧉ Copy Text';
           this.style.color='';this.style.borderColor='';this.style.background='';
@@ -672,12 +709,10 @@ with left:
 </div>
 """, unsafe_allow_html=True)
 
-        # Text area with DOM id for JS copy
         st.markdown('<div id="dv-output-ta">', unsafe_allow_html=True)
         st.text_area("", clean, height=420, label_visibility="collapsed", key="output_ta")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Download clean copy button (native Streamlit — below the text area)
         col_dl, col_sp = st.columns([1, 3])
         with col_dl:
             st.download_button(
@@ -688,6 +723,3 @@ with left:
             )
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-
-
